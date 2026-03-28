@@ -1,8 +1,8 @@
-node_modules/
-.next/
-dist/
-build/
-coverage/
+**/node_modules/
+**/.next/
+**/dist/
+**/build/
+**/coverage/
 
 # Environment files
 .env
