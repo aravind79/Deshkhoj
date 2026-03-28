@@ -1,7 +1,0 @@
-open 145.79.14.32
-u51998786.midr
-3cCrV?fKp/0
-bin
-put deploy_final.zip
-put deploy.php
-quit

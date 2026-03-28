@@ -1,6 +1,0 @@
-open 145.79.14.32
-u519989786.midnightblue-stork-822098.hostingersite.com
-V#z7^e2VGn8SLVbP
-bin
-put deploy.php
-quit
