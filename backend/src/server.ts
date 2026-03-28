@@ -32,7 +32,14 @@ app.use(
 // --- CORS ---
 app.use(
   cors({
-    origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
+    origin: (origin, callback) => {
+      const allowed = process.env.ALLOWED_ORIGINS?.split(',') || [];
+      if (!origin || allowed.includes('*') || allowed.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(null, false);
+      }
+    },
     credentials: true,
   })
 );
