@@ -132,7 +132,7 @@ export default function Home() {
               Desh की <span className="text-primary">Soch</span>,{" "}
               Bharat की <span className="text-accent">Khoj</span>
             </h1>
-            <p className="mt-4 text-sm font-medium text-white/80 leading-relaxed">
+            <p className="mt-4 text-base font-bold text-white leading-relaxed">
               Discover the real Bharat — its craftsmen, its shopkeepers, its farmers and makers.
             </p>
           </motion.div>
@@ -161,7 +161,7 @@ export default function Home() {
                 Search
               </button>
             </div>
-            <p className="mt-3 text-xs text-white/50">
+            <p className="mt-3 text-sm font-medium text-white/80">
               Try: Cake Shop · Tailor · Kirana · Halwai · Parlour
             </p>
           </motion.div>
@@ -198,7 +198,7 @@ export default function Home() {
             {STATS.map((stat, i) => (
               <div key={i} className="flex flex-col items-center">
                 <span className="text-2xl font-black text-primary drop-shadow">{stat.value}</span>
-                <span className="text-[11px] font-bold uppercase tracking-widest text-white/60">{stat.label}</span>
+                <span className="text-[12px] font-black uppercase tracking-widest text-white">{stat.label}</span>
               </div>
             ))}
           </motion.div>
@@ -209,7 +209,7 @@ export default function Home() {
       <section className="overflow-hidden border-y border-card-border bg-white py-5">
         <div className="marquee-track flex gap-8">
           {[...BUSINESS_TYPES, ...BUSINESS_TYPES].map((biz, i) => (
-            <div key={i} className="flex flex-shrink-0 items-center gap-2 text-sm font-bold text-foreground/50 hover:text-primary transition-colors cursor-default">
+            <div key={i} className="flex flex-shrink-0 items-center gap-2 text-sm font-bold text-foreground/70 hover:text-primary transition-colors cursor-default">
               <span className="text-xl">{biz.icon}</span>
               <span>{biz.label}</span>
             </div>
@@ -224,7 +224,7 @@ export default function Home() {
           <h2 className="text-4xl font-black tracking-tighter text-foreground sm:text-5xl">
             Why <span className="text-primary">DeshKhoj</span>?
           </h2>
-          <p className="mt-4 text-base text-foreground/50 max-w-xl mx-auto">
+          <p className="mt-4 text-base font-medium text-foreground/70 max-w-xl mx-auto">
             We exist to connect real Bharat — its makers, its markets, its stories.
           </p>
         </div>
@@ -266,7 +266,7 @@ export default function Home() {
               {/* Text at bottom */}
               <div className="absolute bottom-0 left-0 right-0 p-7 z-10">
                 <p
-                  className="text-[10px] font-black uppercase tracking-[0.2em] mb-2"
+                  className="text-xs font-black uppercase tracking-[0.2em] mb-2"
                   style={{ color: card.accentColor }}
                 >
                   {card.subtitle}
@@ -274,7 +274,7 @@ export default function Home() {
                 <h3 className="text-xl font-black text-white mb-2 leading-tight">
                   {card.title}
                 </h3>
-                <p className="text-sm text-white/70 leading-relaxed max-w-xs opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0">
+                <p className="text-sm font-medium text-white/90 leading-relaxed max-w-xs opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0">
                   {card.desc}
                 </p>
               </div>
@@ -294,7 +294,7 @@ export default function Home() {
           <motion.p
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
-            className="text-2xl font-bold text-foreground/40 mb-1"
+            className="text-2xl font-bold text-foreground/60 mb-1"
           >
             प्रसिद्ध कैटेगरी
           </motion.p>
@@ -333,7 +333,7 @@ export default function Home() {
           <motion.p
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
-            className="text-2xl font-bold text-foreground/40 mb-1"
+            className="text-2xl font-bold text-foreground/60 mb-1"
           >
             प्रसिद्ध उत्पाद
           </motion.p>

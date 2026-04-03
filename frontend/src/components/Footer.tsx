@@ -3,7 +3,7 @@ import Image from 'next/image';
 
 export default function Footer() {
   return (
-    <footer className="mt-20 border-t border-card-border bg-card-bg pt-16 pb-8">
+    <footer className="mt-12 border-t border-card-border bg-card-bg pt-10 pb-6">
       <div className="container mx-auto px-4 md:px-6">
         <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
           <div className="space-y-4">
@@ -30,7 +30,7 @@ export default function Footer() {
             </ul>
           </div>
         </div>
-        <div className="mt-16 flex items-center justify-center border-t border-card-border pt-8 text-sm text-foreground/50">
+        <div className="mt-8 flex items-center justify-center border-t border-card-border pt-6 text-sm text-foreground/50">
           © {new Date().getFullYear()} DeshKhoj. All rights reserved.
         </div>
       </div>
