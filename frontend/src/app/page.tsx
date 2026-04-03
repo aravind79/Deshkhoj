@@ -267,8 +267,8 @@ export default function Home() {
               <div className="absolute bottom-0 left-0 right-0 p-7 z-10 flex flex-col justify-end min-h-[160px]">
                 <div className="min-h-[60px] flex flex-col justify-end">
                   <p
-                    className="text-xs font-black uppercase tracking-[0.2em] mb-1 leading-tight"
-                    style={{ color: card.accentColor, textShadow: "0 1px 2px rgba(0,0,0,0.5)" }}
+                    className="text-xs font-black uppercase tracking-[0.2em] mb-1 leading-tight text-white"
+                    style={{ textShadow: "0 1px 2px rgba(0,0,0,0.5)" }}
                   >
                     {card.subtitle}
                   </p>
