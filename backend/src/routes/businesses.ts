@@ -103,22 +103,22 @@ router.get('/', async (req: Request, res: Response) => {
     }
 
     if (state_id) {
-      conditions.push(`u.state_id = ?`);
+      conditions.push(`d.state_id = ?`);
       params.push(state_id);
     }
 
     if (district_id) {
-      conditions.push(`u.district_id = ?`);
+      conditions.push(`d.district_id = ?`);
       params.push(district_id);
     }
 
     if (block_id) {
-      conditions.push(`u.block_id = ?`);
+      conditions.push(`d.block_id = ?`);
       params.push(block_id);
     }
 
     if (village_id) {
-      conditions.push(`u.village_id = ?`);
+      conditions.push(`d.village_id = ?`);
       params.push(village_id);
     }
 
@@ -126,7 +126,7 @@ router.get('/', async (req: Request, res: Response) => {
 
     // Get Total Count
     const countResult = await query(
-      `SELECT COUNT(*) as count FROM dukaan_list d LEFT JOIN user_list u ON d.user_id = u.id ${whereClause}`,
+      `SELECT COUNT(*) as count FROM dukaan_list d ${whereClause}`,
       params
     );
     const total = parseInt(countResult.rows[0]?.count || '0');
@@ -134,11 +134,10 @@ router.get('/', async (req: Request, res: Response) => {
     // Get Results
     const queryParams = [...params, parseInt(limit as string), offset];
     const result = await query(
-      `SELECT d.*, u.state_id, u.district_id, u.block_id, u.village_id,
+      `SELECT d.*, 
               (SELECT COALESCE(AVG(rating), 0) FROM dukaan_reviews WHERE shop_id = d.id) as avg_rating,
               (SELECT COUNT(*) FROM dukaan_reviews WHERE shop_id = d.id) as review_count
        FROM dukaan_list d 
-       LEFT JOIN user_list u ON d.user_id = u.id 
        ${whereClause} 
        ORDER BY d.id DESC 
        LIMIT ? OFFSET ?`,
@@ -168,11 +167,10 @@ router.get('/', async (req: Request, res: Response) => {
 router.get('/:id', async (req: Request, res: Response) => {
   try {
     const dukaanResult = await query(
-      `SELECT d.*, u.state_id, u.district_id, u.block_id, u.village_id,
+      `SELECT d.*,
               (SELECT COALESCE(AVG(rating), 0) FROM dukaan_reviews WHERE shop_id = d.id) as avg_rating,
               (SELECT COUNT(*) FROM dukaan_reviews WHERE shop_id = d.id) as review_count
        FROM dukaan_list d
-       LEFT JOIN user_list u ON d.user_id = u.id
        WHERE d.id = ?`,
       [req.params.id]
     );
