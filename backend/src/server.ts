@@ -20,27 +20,23 @@ const app = express();
 
 // --- Security & Rate Limiting ---
 app.use(helmet());
-app.use(
-  rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 200,
-    standardHeaders: true,
-    legacyHeaders: false,
-  })
-);
+// app.use(
+//   rateLimit({
+//     windowMs: 15 * 60 * 1000, // 15 minutes
+//     max: 200,
+//     standardHeaders: true,
+//     legacyHeaders: false,
+//   })
+// );
 
 // --- CORS ---
+// app.options('*', cors({ origin: '*' })); // Express 5 compatibility fix
 app.use(
   cors({
-    origin: (origin, callback) => {
-      const allowed = process.env.ALLOWED_ORIGINS?.split(',') || [];
-      if (!origin || allowed.includes('*') || allowed.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(null, false);
-      }
-    },
-    credentials: true,
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: false,
   })
 );
 
@@ -70,10 +66,23 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/admin', adminRoutes);
 
-// --- 404 Handler ---
-app.use((_req, res) => {
-  res.status(404).json({ success: false, message: 'Route not found' });
-});
+// --- Static Frontend (Production Only) ---
+const frontendPath = path.resolve(__dirname, '../public');
+if (fs.existsSync(frontendPath)) {
+  app.use(express.static(frontendPath));
+  app.get('*', (req: express.Request, res: express.Response) => {
+    if (!req.path.startsWith('/api')) {
+      res.sendFile(path.join(frontendPath, 'index.html'));
+    } else {
+      res.status(404).json({ success: false, message: 'API Route not found' });
+    }
+  });
+} else {
+  // --- 404 Handler ---
+  app.use((_req, res) => {
+    res.status(404).json({ success: false, message: 'Route not found' });
+  });
+}
 
 // --- Error Handler ---
 app.use(errorHandler);
@@ -84,5 +93,6 @@ app.listen(PORT, () => {
   console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`   Health:      http://localhost:${PORT}/api/health\n`);
 });
+
 
 export default app;
