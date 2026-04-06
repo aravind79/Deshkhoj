@@ -135,8 +135,8 @@ router.get('/', async (req: Request, res: Response) => {
     const queryParams = [...params, parseInt(limit as string), offset];
     const result = await query(
       `SELECT d.*, u.state_id, u.district_id, u.block_id, u.village_id,
-              (SELECT COALESCE(AVG(rating), 0)::FLOAT FROM dukaan_reviews WHERE shop_id = d.id) as avg_rating,
-              (SELECT COUNT(*)::INT FROM dukaan_reviews WHERE shop_id = d.id) as review_count
+              (SELECT COALESCE(AVG(rating), 0) FROM dukaan_reviews WHERE shop_id = d.id) as avg_rating,
+              (SELECT COUNT(*) FROM dukaan_reviews WHERE shop_id = d.id) as review_count
        FROM dukaan_list d 
        LEFT JOIN user_list u ON d.user_id = u.id 
        ${whereClause} 
@@ -169,8 +169,8 @@ router.get('/:id', async (req: Request, res: Response) => {
   try {
     const dukaanResult = await query(
       `SELECT d.*, u.state_id, u.district_id, u.block_id, u.village_id,
-              (SELECT COALESCE(AVG(rating), 0)::FLOAT FROM dukaan_reviews WHERE shop_id = d.id) as avg_rating,
-              (SELECT COUNT(*)::INT FROM dukaan_reviews WHERE shop_id = d.id) as review_count
+              (SELECT COALESCE(AVG(rating), 0) FROM dukaan_reviews WHERE shop_id = d.id) as avg_rating,
+              (SELECT COUNT(*) FROM dukaan_reviews WHERE shop_id = d.id) as review_count
        FROM dukaan_list d
        LEFT JOIN user_list u ON d.user_id = u.id
        WHERE d.id = ?`,
