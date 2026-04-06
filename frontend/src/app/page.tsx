@@ -152,7 +152,7 @@ export default function Home() {
               Desh की <span className="text-primary">Soch</span>,{" "}
               Bharat की <span className="text-accent">Khoj</span>
             </h1>
-            <p className="mt-4 text-base font-bold text-white leading-relaxed">
+            <p className="mt-6 text-xl font-bold text-white leading-tight sm:text-2xl md:text-3xl drop-shadow-md shadow-black max-w-4xl mx-auto">
               Discover the real Bharat — its craftsmen, its shopkeepers, its farmers and makers.
             </p>
           </motion.div>
@@ -217,8 +217,8 @@ export default function Home() {
           >
             {STATS.map((stat, i) => (
               <div key={i} className="flex flex-col items-center">
-                <span className="text-2xl font-black text-primary drop-shadow">{stat.value}</span>
-                <span className="text-[12px] font-black uppercase tracking-widest text-white">{stat.label}</span>
+                <span className="text-4xl font-black text-primary drop-shadow-lg sm:text-5xl md:text-6xl">{stat.value}</span>
+                <span className="text-[14px] font-black uppercase tracking-[0.2em] text-white sm:text-[16px] md:text-[18px] opacity-90">{stat.label}</span>
               </div>
             ))}
           </motion.div>
