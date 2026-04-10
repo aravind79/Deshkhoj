@@ -36,10 +36,10 @@ export default function Header() {
             </Link>
           </motion.div>
           <div className="flex items-center gap-2 border-l border-card-border pl-4">
-            <button className="flex items-center gap-2 rounded-full p-1 hover:bg-card-border/50 text-foreground transition">
+            <Link href="/admin" className="flex items-center gap-2 rounded-full p-1 hover:bg-card-border/50 text-foreground transition">
               <UserCircle className="h-6 w-6 text-foreground/70" />
               <span className="hidden text-sm font-medium md:block">Login</span>
-            </button>
+            </Link>
             <button className="flex p-2 md:hidden">
               <Menu className="h-6 w-6" />
             </button>

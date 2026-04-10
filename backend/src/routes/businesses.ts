@@ -135,7 +135,7 @@ router.get('/', async (req: Request, res: Response) => {
     const queryParams = [...params, parseInt(limit as string), offset];
     const result = await query(
       `SELECT d.*, 
-              (SELECT COALESCE(AVG(rating), 0) FROM dukaan_reviews WHERE shop_id = d.id) as avg_rating,
+              (SELECT CAST(COALESCE(AVG(rating), 0) AS DECIMAL(10,2)) FROM dukaan_reviews WHERE shop_id = d.id) as avg_rating,
               (SELECT COUNT(*) FROM dukaan_reviews WHERE shop_id = d.id) as review_count
        FROM dukaan_list d 
        ${whereClause} 
@@ -168,7 +168,7 @@ router.get('/:id', async (req: Request, res: Response) => {
   try {
     const dukaanResult = await query(
       `SELECT d.*,
-              (SELECT COALESCE(AVG(rating), 0) FROM dukaan_reviews WHERE shop_id = d.id) as avg_rating,
+              (SELECT CAST(COALESCE(AVG(rating), 0) AS DECIMAL(10,2)) FROM dukaan_reviews WHERE shop_id = d.id) as avg_rating,
               (SELECT COUNT(*) FROM dukaan_reviews WHERE shop_id = d.id) as review_count
        FROM dukaan_list d
        WHERE d.id = ?`,

@@ -229,7 +229,11 @@ export default function Home() {
       <section className="overflow-hidden border-y border-card-border bg-white py-5">
         <div className="marquee-track flex gap-8">
           {[...BUSINESS_TYPES, ...BUSINESS_TYPES].map((biz, i) => (
-            <div key={i} className="flex flex-shrink-0 items-center gap-2 text-sm font-bold text-foreground/70 hover:text-primary transition-colors cursor-default">
+            <div 
+              key={i} 
+              onClick={() => handleRedirect(biz.label)}
+              className="flex flex-shrink-0 items-center gap-2 text-sm font-bold text-foreground/70 hover:text-primary transition-colors cursor-pointer"
+            >
               <span className="text-xl">{biz.icon}</span>
               <span>{biz.label}</span>
             </div>
