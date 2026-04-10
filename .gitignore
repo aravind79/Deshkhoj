@@ -18,6 +18,14 @@
 *.zip
 deploy_final.zip
 deploy.zip
+deploy_final/
+deploy_fix/
+deploy-me/
+staging_v7/
+tmp_extract/
+tmp_test/
+desh_khoj/
+deshkhoj/
 
 # Logs
 npm-debug.log*

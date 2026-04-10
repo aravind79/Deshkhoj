@@ -19,16 +19,16 @@ export default function Footer() {
             <div>
               <h3 className="mb-4 text-lg font-semibold text-foreground">Quick Links</h3>
               <ul className="space-y-2 text-sm text-foreground/70">
-                <li><Link href="/" className="hover:text-primary transition">About Us</Link></li>
-                <li><Link href="/" className="hover:text-primary transition">Contact Us</Link></li>
-                <li><Link href="/" className="hover:text-primary transition">Add Business</Link></li>
+                <li><Link href="/about" className="hover:text-primary transition">About Us</Link></li>
+                <li><Link href="/contact" className="hover:text-primary transition">Contact Us</Link></li>
+                <li><Link href="/register" className="hover:text-primary transition">Add Business</Link></li>
               </ul>
             </div>
             <div>
               <h3 className="mb-4 text-lg font-semibold text-foreground">Support</h3>
               <ul className="space-y-2 text-sm text-foreground/70">
-                <li><Link href="/" className="hover:text-primary transition">Privacy Policy</Link></li>
-                <li><Link href="/" className="hover:text-primary transition">Terms of Service</Link></li>
+                <li><Link href="/privacy" className="hover:text-primary transition">Privacy Policy</Link></li>
+                <li><Link href="/terms" className="hover:text-primary transition">Terms of Service</Link></li>
               </ul>
             </div>
           </div>
