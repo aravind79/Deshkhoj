@@ -166,6 +166,12 @@ export const api = {
       description?: string;
     }) => apiFetch<{ success: boolean; message: string }>('/inquiries', { method: 'POST', body: JSON.stringify(body) }),
   },
+
+  // ---------- Messages ----------
+  messages: {
+    send: (body: { name: string; email: string; message: string }) =>
+      apiFetch<{ success: boolean; message: string }>('/messages', { method: 'POST', body: JSON.stringify(body) }),
+  },
 };
 
 // ---------- Types ----------

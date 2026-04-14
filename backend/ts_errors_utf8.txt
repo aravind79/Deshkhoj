@@ -1,0 +1,2 @@
+﻿src/routes/auth.ts(34,15): error TS2339: Property 'insertId' does not exist on type 'QueryResult<any>'.
+src/routes/businesses.ts(203,31): error TS2339: Property 'insertId' does not exist on type 'QueryResult<any>'.

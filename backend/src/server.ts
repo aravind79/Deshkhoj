@@ -14,6 +14,7 @@ import categoryRoutes from './routes/categories';
 import productRoutes from './routes/products';
 import adminRoutes from './routes/admin';
 import inquiriesRoutes from './routes/inquiries';
+import messagesRoutes from './routes/messages';
 
 dotenv.config();
 
@@ -67,6 +68,7 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/inquiries', inquiriesRoutes);
+app.use('/api/messages', messagesRoutes);
 
 // --- Static Frontend (Production Only) ---
 const frontendPath = path.resolve(__dirname, '../public');

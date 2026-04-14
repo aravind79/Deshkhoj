@@ -1,0 +1,31 @@
+﻿[dotenv@17.3.1] injecting env (9) from .env -- tip: ΓÜÖ∩╕Å  override existing env vars with { override: true }
+node : Error: SASL: SCRAM-
+SERVER-FIRST-MESSAGE: 
+client password must be a 
+string
+At line:1 char:1
++ node migrate.js > 
+migrate_err.txt 2>&1
++ ~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~
+    + CategoryInfo        
+      : NotSpecified: (E  
+  rror: SASL: SC...ust    
+ be a string:String) [    
+], RemoteException
+    + FullyQualifiedError 
+   Id : NativeCommandErr  
+  or
+ 
+    at E:\WORKS\zyt\DeshKh
+oj-Code-Reference\backend\
+node_modules\pg-pool\index
+.js:45:11
+    at process.processTick
+sAndRejections (node:inter
+nal/process/task_queues:10
+5:5)
+    at async migrate (E:\W
+ORKS\zyt\DeshKhoj-Code-Ref
+erence\backend\migrate.js:
+325:18)
