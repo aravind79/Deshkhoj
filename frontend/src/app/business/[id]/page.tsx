@@ -11,6 +11,7 @@ import {
 import { api, API_BASE, type Business } from "@/lib/api";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import InquiryModal from "@/components/InquiryModal";
 
 export default function BusinessDetail() {
   const { id } = useParams();
@@ -21,6 +22,7 @@ export default function BusinessDetail() {
   const [reviewForm, setReviewForm] = useState({ user_name: "", rating: 5, comment: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [reviewSuccess, setReviewSuccess] = useState(false);
+  const [isInquiryOpen, setIsInquiryOpen] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -154,7 +156,10 @@ export default function BusinessDetail() {
                       </div>
                     </div>
 
-                    <button className="w-full rounded-2xl bg-primary py-4 text-sm font-black text-white shadow-lg hover:bg-primary-hover transition-all active:scale-95">
+                    <button 
+                      onClick={() => setIsInquiryOpen(true)}
+                      className="w-full rounded-2xl bg-primary py-4 text-sm font-black text-white shadow-lg hover:bg-primary-hover transition-all active:scale-95"
+                    >
                       GET BEST PRICE
                     </button>
                   </div>
@@ -344,6 +349,13 @@ export default function BusinessDetail() {
           </div>
         </div>
       </div>
+
+      <InquiryModal 
+        isOpen={isInquiryOpen} 
+        onClose={() => setIsInquiryOpen(false)} 
+        shopId={biz.id} 
+        initialData={{ category: biz.shop_categories }}
+      />
     </div>
   );
 }

@@ -153,6 +153,19 @@ export const api = {
         headers: { Authorization: `Bearer ${token}` },
       }),
   },
+
+  // ---------- Inquiries ----------
+  inquiries: {
+    submit: (body: {
+      shop_id: number;
+      name: string;
+      business_name?: string;
+      phone_number: string;
+      category?: string;
+      interested_product?: string;
+      description?: string;
+    }) => apiFetch<{ success: boolean; message: string }>('/inquiries', { method: 'POST', body: JSON.stringify(body) }),
+  },
 };
 
 // ---------- Types ----------

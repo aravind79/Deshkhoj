@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense, useEffect, useState, useCallback } from "react";
 import { MapPin, Star, Phone, Search, SlidersHorizontal, CheckCircle2 } from "lucide-react";
 import { api, API_BASE, type Business } from "@/lib/api";
+import InquiryModal from "@/components/InquiryModal";
 
 interface LocationOption { id: number; name: string }
 
@@ -27,6 +28,7 @@ function SearchResults() {
   const [selectedDistrict, setSelectedDistrict] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(initialCat);
   const [page, setPage] = useState(1);
+  const [inquiryShop, setInquiryShop] = useState<Business | null>(null);
 
   const fetchResults = useCallback(async (overrides?: { q?: string; loc?: string; page?: number; district_id?: string; category?: string }) => {
     setLoading(true);
@@ -254,13 +256,13 @@ function SearchResults() {
 
                     {/* Bottom: Actions */}
                     <div className="mt-8 flex flex-wrap items-center gap-3" onClick={e => e.stopPropagation()}>
-                      <a
-                        href={`tel:${biz.contact_no}`}
+                      <button
+                        onClick={() => setInquiryShop(biz)}
                         className="flex h-12 flex-1 min-w-[160px] items-center justify-center gap-2 rounded-xl bg-primary px-6 font-bold text-white shadow-md hover:bg-primary-hover transition-all active:scale-95 text-sm uppercase tracking-widest"
                       >
                          <Phone className="h-4 w-4" />
                          Get Best Price
-                      </a>
+                      </button>
                       
                       <a
                         href={`https://wa.me/${biz.whatsapp || biz.contact_no}`}
@@ -300,6 +302,13 @@ function SearchResults() {
           )}
         </div>
       </div>
+
+      <InquiryModal 
+        isOpen={!!inquiryShop} 
+        onClose={() => setInquiryShop(null)} 
+        shopId={inquiryShop?.id || 0} 
+        initialData={{ category: inquiryShop?.shop_categories }}
+      />
     </div>
   );
 }
