@@ -73,7 +73,7 @@ graph TD
 ### Backend (Shared Hosting)
 - **Workflow**: 
   1. Build locally: `npm run build`.
-  2. Upload `dist/` and `package.json`.
+  2. Upload `dist/` and `package.json`. 
   3. Run `npm install --omit=dev`.
   4. Use **PM2** to manage the process: `pm2 start dist/server.js`.
 

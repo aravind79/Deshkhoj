@@ -52,9 +52,10 @@ router.post('/login', async (req: Request, res: Response) => {
       return;
     }
 
+    // Query admin_users table (created for new auth system)
     const result = await query(
-      'SELECT id, username, password, name, mobile, email, role FROM user_list WHERE username = ? OR mobile = ?',
-      [username, username]
+      'SELECT id, username, password, name, email, role FROM admin_users WHERE username = ?',
+      [username]
     );
 
     if (!result.rows.length) {
@@ -86,9 +87,9 @@ router.post('/login', async (req: Request, res: Response) => {
         role: user.role,
       },
     });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: 'Server error' });
+  } catch (err: any) {
+    console.error('LOGIN ERROR:', err.message);
+    res.status(500).json({ success: false, message: 'Server error', detail: err.message });
   }
 });
 

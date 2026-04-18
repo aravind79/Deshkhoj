@@ -25,7 +25,10 @@ router.post('/upload', upload.single('image'), (req: Request, res: Response) => 
     res.status(400).json({ success: false, message: 'No file uploaded' });
     return;
   }
-  res.json({ success: true, filename: req.file.filename });
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+  const host = req.headers['x-forwarded-host'] || req.get('host');
+  const fileUrl = `${protocol}://${host}/uploads/${req.file.filename}`;
+  res.json({ success: true, filename: req.file.filename, url: fileUrl });
 });
 
 /**
@@ -36,9 +39,9 @@ router.get('/stats', async (_req: Request, res: Response) => {
   try {
     const [totalBusiness, activeBusiness, users, pending, products, states, districts] = await Promise.all([
       query("SELECT COUNT(*) as count FROM dukaan_list WHERE dukaan_name != 'Sample Shop Name'"),
-      query("SELECT COUNT(*) as count FROM dukaan_list d WHERE d.status = 'active'"),
+      query("SELECT COUNT(*) as count FROM dukaan_list d WHERE d.paid = 1"),
       query("SELECT COUNT(*) as count FROM user_list"),
-      query("SELECT COUNT(*) as count FROM dukaan_list WHERE status = 'pending'"),
+      query("SELECT COUNT(*) as count FROM dukaan_list WHERE paid = 0"),
       query("SELECT COUNT(*) as count FROM dukaan_products WHERE is_del = 0"),
       query("SELECT COUNT(*) as count FROM states"),
       query("SELECT COUNT(*) as count FROM districts"),
@@ -49,7 +52,7 @@ router.get('/stats', async (_req: Request, res: Response) => {
       data: {
         totalBusinesses: parseInt(totalBusiness.rows[0]?.count || '0'),
         activeBusinesses: parseInt(activeBusiness.rows[0]?.count || '0'),
-        users: parseInt(users.rows[0]?.count || '0'), 
+        users: parseInt(users.rows[0]?.count || '0'),
         pending: parseInt(pending.rows[0]?.count || '0'),
         products: parseInt(products.rows[0]?.count || '0'),
         states: parseInt(states.rows[0]?.count || '0'),
@@ -81,9 +84,9 @@ router.get('/', async (req: Request, res: Response) => {
     } = req.query;
 
     const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
-    
-    // PUBLIC SEARCH: Only show active businesses
-    const conditions: string[] = ["d.status = 'active'"];
+
+    // PUBLIC SEARCH: Show all businesses
+    const conditions: string[] = [];
     const params: any[] = [];
     let paramIndex = 1;
 
@@ -131,12 +134,11 @@ router.get('/', async (req: Request, res: Response) => {
     );
     const total = parseInt(countResult.rows[0]?.count || '0');
 
-    // Get Results
+    // Get Results - map legacy photos to main_photo
     const queryParams = [...params, parseInt(limit as string), offset];
     const result = await query(
-      `SELECT d.*, 
-              (SELECT CAST(COALESCE(AVG(rating), 0) AS DECIMAL(10,2)) FROM dukaan_reviews WHERE shop_id = d.id) as avg_rating,
-              (SELECT COUNT(*) FROM dukaan_reviews WHERE shop_id = d.id) as review_count
+      `SELECT d.*,
+       COALESCE(NULLIF(d.main_photo, ''), (SELECT photo_name FROM dukaan_photos WHERE id = d.dukaan_img_id LIMIT 1)) as main_photo
        FROM dukaan_list d 
        ${whereClause} 
        ORDER BY d.id DESC 
@@ -154,9 +156,9 @@ router.get('/', async (req: Request, res: Response) => {
         totalPages: Math.ceil(total / parseInt(limit as string)),
       },
     });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: 'Server error' });
+  } catch (err: any) {
+    console.error('BUSINESSES ROUTE ERROR:', err.message);
+    res.status(500).json({ success: false, message: 'Server error', detail: err.message });
   }
 });
 
@@ -166,10 +168,10 @@ router.get('/', async (req: Request, res: Response) => {
  */
 router.get('/:id', async (req: Request, res: Response) => {
   try {
+    // Fetch business details without the subqueries to avoid crashing if reviews table is missing
     const dukaanResult = await query(
       `SELECT d.*,
-              (SELECT CAST(COALESCE(AVG(rating), 0) AS DECIMAL(10,2)) FROM dukaan_reviews WHERE shop_id = d.id) as avg_rating,
-              (SELECT COUNT(*) FROM dukaan_reviews WHERE shop_id = d.id) as review_count
+              COALESCE(NULLIF(TRIM(d.main_photo), ''), (SELECT NULLIF(TRIM(photo_name), '') FROM dukaan_photos WHERE id = d.dukaan_img_id LIMIT 1), 'sample.jpg') as main_photo
        FROM dukaan_list d
        WHERE d.id = ?`,
       [req.params.id]
@@ -189,17 +191,35 @@ router.get('/:id', async (req: Request, res: Response) => {
       [req.params.id]
     );
 
+    // Try to fetch reviews, but don't crash if it fails
+    let avg_rating = 0;
+    let review_count = 0;
+    try {
+      const reviewsResult = await query(
+        'SELECT CAST(COALESCE(AVG(rating), 0) AS DECIMAL(10,2)) as avg_rating, COUNT(*) as review_count FROM dukaan_reviews WHERE shop_id = ?',
+        [req.params.id]
+      );
+      if (reviewsResult.rows.length > 0) {
+        avg_rating = reviewsResult.rows[0].avg_rating;
+        review_count = reviewsResult.rows[0].review_count;
+      }
+    } catch (e) {
+      console.warn("Could not fetch reviews (table might be missing)", e);
+    }
+
     res.json({
       success: true,
       data: {
         ...dukaanResult.rows[0],
+        avg_rating,
+        review_count,
         photos: photosResult.rows,
         products: productsResult.rows,
       },
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error(err);
-    res.status(500).json({ success: false, message: 'Server error' });
+    res.status(500).json({ success: false, message: 'Server error', detail: err.message, stack: err.stack });
   }
 });
 
@@ -212,21 +232,20 @@ router.post('/', async (req: Request, res: Response) => {
     const {
       dukaan_name, dukaan_addr, dukaandar_name, contact_no, whatsapp, pincode, block_id,
       dukaan_desc, email, shop_categories, category_1, category_2, category_3,
-      business_type, gst_no, payment_modes, main_photo, gallery, 
+      business_type, gst_no, payment_modes, main_photo, gallery,
       years_established = 0, products = [], user_id = 1
     } = req.body;
 
     const result = await query(
       `INSERT INTO dukaan_list (
-        user_id, dukaan_name, dukaan_addr, dukaandar_name, contact_no, whatsapp, pincode, block_id,
+        user_id, dukaan_name, dukaan_addr, dukaandar_name, contact_no, whatsapp, pincode,
         dukaan_desc, email, shop_categories, category_1, category_2, category_3,
         business_type, gst_no, payment_modes, main_photo, gallery, 
         years_established, video_name, audio_name, dukaan_img_id, paid, status
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '', '', 1, 0, 'pending')`,
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '', '', 1, 0, 'pending')`,
       [
-        user_id, dukaan_name, dukaan_addr, dukaandar_name, contact_no, whatsapp, pincode, 
-        (block_id && !isNaN(Number(block_id))) ? Number(block_id) : null,
+        user_id, dukaan_name, dukaan_addr, dukaandar_name, contact_no, whatsapp, pincode,
         dukaan_desc, email, shop_categories, category_1 || shop_categories, category_2 || '', category_3 || '',
         business_type, gst_no, payment_modes, main_photo, gallery, years_established
       ]
@@ -245,9 +264,9 @@ router.post('/', async (req: Request, res: Response) => {
     if (products && Array.isArray(products) && products.length > 0) {
       for (const prod of products) {
         await query(
-          `INSERT INTO dukaan_products (prod_name, prod_desc, prod_amt, shop_id, prod_img, is_del, cat_id, quantity, unit)
-           VALUES (?, ?, ?, ?, ?, 0, ?, 1, 'pcs')`,
-          [prod.name || prod.prod_name, prod.description || prod.prod_desc || '', prod.price || prod.prod_amt || '0', businessId, prod.image || prod.prod_img || '', catId]
+          `INSERT INTO dukaan_products (prod_name, prod_desc, prod_amt, shop_id, is_del, cat_id, quantity, unit)
+           VALUES (?, ?, ?, ?, 0, ?, 1, 'pcs')`,
+          [prod.name || prod.prod_name, prod.description || prod.prod_desc || '', prod.price || prod.prod_amt || '0', businessId, catId]
         );
       }
     }
@@ -273,9 +292,10 @@ router.get('/:id/reviews', async (req: Request, res: Response) => {
       [req.params.id]
     );
     res.json({ success: true, data: result.rows });
-  } catch (err) {
+  } catch (err: any) {
     console.error(err);
-    res.status(500).json({ success: false, message: 'Server error' });
+    // Return empty array instead of 500 error if table is missing
+    res.json({ success: true, data: [] });
   }
 });
 

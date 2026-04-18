@@ -6,6 +6,7 @@ import path from 'path';
 import fs from 'fs';
 import rateLimit from 'express-rate-limit';
 
+import { query } from './db';
 import { errorHandler } from './middleware/errorHandler';
 import authRoutes from './routes/auth';
 import businessRoutes from './routes/businesses';
@@ -17,6 +18,14 @@ import inquiriesRoutes from './routes/inquiries';
 import messagesRoutes from './routes/messages';
 
 dotenv.config();
+
+// --- Global Safety Net ---
+process.on('uncaughtException', (err) => {
+  console.error('CRITICAL UNCAUGHT EXCEPTION:', err);
+});
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('UNHANDLED REJECTION:', reason);
+});
 
 const app = express();
 
@@ -32,12 +41,12 @@ app.use(helmet());
 // );
 
 // --- CORS ---
-// app.options('*', cors({ origin: '*' })); // Express 5 compatibility fix
+app.options(/.*/, cors()); // Handle OPTIONS preflight for all routes
 app.use(
   cors({
     origin: '*',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     credentials: false,
   })
 );
@@ -54,10 +63,75 @@ uploadDirs.forEach((dir) => {
 
 // --- Static Files (Uploads) ---
 app.use('/uploads', express.static(path.resolve('./uploads')));
+app.use('/api/uploads', express.static(path.resolve('./uploads'))); // Fallback for Vercel API_BASE
 
 // --- Health Check ---
 app.get('/api/health', (_req, res) => {
   res.json({ success: true, message: 'DeshKhoj API is running', timestamp: new Date() });
+});
+
+// --- Secret Admin: Flatten Images (Safe Version) ---
+app.get('/api/admin/flatten', (req, res) => {
+  const uploadsDir = path.resolve('./uploads');
+  let movedCount = 0;
+  // This route now uses raw fs to avoid any DB dependencies
+  function flatten(dir: string) {
+    const items = fs.readdirSync(dir);
+    for (const item of items) {
+      const fullPath = path.join(dir, item);
+      if (fs.statSync(fullPath).isDirectory()) {
+        if (item !== 'csv') flatten(fullPath);
+      } else {
+        const destPath = path.join(uploadsDir, item);
+        if (!fs.existsSync(destPath) && fullPath !== destPath) {
+          try { fs.renameSync(fullPath, destPath); movedCount++; } catch (e) { }
+        }
+      }
+    }
+  }
+  try {
+    flatten(uploadsDir);
+    res.json({ success: true, message: `Successfully organized ${movedCount} images.` });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// --- Secret Admin: Radar (Find my files) ---
+app.get('/api/admin/radar', (req, res) => {
+  try {
+    const cwd = process.cwd();
+    const uploadsPath = path.resolve('./uploads');
+
+    // Scan root, dist, and nodejs for uploads or the zip file
+    const scanPath = (dir: string) => {
+      try {
+        if (fs.existsSync(dir)) {
+          return fs.readdirSync(dir).filter(f => f.includes('upload') || f.includes('image') || f.includes('.zip'));
+        }
+        return ['Directory not found'];
+      } catch (e) {
+        return [`Error reading ${dir}`];
+      }
+    };
+
+    res.json({
+      success: true,
+      serverInfo: {
+        workingDirectory: cwd,
+        expectedUploadsFolder: uploadsPath,
+        doesExpectedFolderExist: fs.existsSync(uploadsPath),
+      },
+      fileRadar: {
+        root: scanPath(path.resolve('./')),
+        dist: scanPath(path.resolve('./dist')),
+        nodejs: scanPath(path.resolve('./nodejs')),
+        parent: scanPath(path.resolve('../')),
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
 });
 
 // --- Routes ---
@@ -74,7 +148,7 @@ app.use('/api/messages', messagesRoutes);
 const frontendPath = path.resolve(__dirname, '../public');
 if (fs.existsSync(frontendPath)) {
   app.use(express.static(frontendPath));
-  app.get('*', (req: express.Request, res: express.Response) => {
+  app.get(/.*/, (req: express.Request, res: express.Response) => {
     if (!req.path.startsWith('/api')) {
       res.sendFile(path.join(frontendPath, 'index.html'));
     } else {
