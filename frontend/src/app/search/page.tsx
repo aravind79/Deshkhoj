@@ -251,7 +251,15 @@ function SearchResults() {
                         <MapPin className="h-4 w-4" />
                       </div>
                       <span className="line-clamp-1 flex-1 font-medium">{biz.dukaan_addr}</span>
-                      <button className="text-primary font-bold text-xs hover:underline">View More ▾</button>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/business/${biz.id}`);
+                        }}
+                        className="text-primary font-bold text-xs hover:underline"
+                      >
+                        View More ▾
+                      </button>
                     </div>
 
                     {/* Bottom: Actions */}
