@@ -33,10 +33,19 @@ function SearchResults() {
   const fetchResults = useCallback(async (overrides?: { q?: string; loc?: string; page?: number; state_id?: string; district_id?: string; category?: string }) => {
     setLoading(true);
     try {
+      const searchQ = overrides?.q ?? q;
+      const searchCat = overrides?.category ?? selectedCategory;
+
+      // Smart Logic: If the text query matches the category (e.g. "Cake Shop" vs "Cake Shop"),
+      // we ignore the text query for the API call to avoid over-filtering.
+      const apiQ = (searchQ && searchCat && searchQ.toLowerCase().trim() === searchCat.toLowerCase().trim())
+        ? ""
+        : searchQ;
+
       const res = await api.businesses.search({
-        q: overrides?.q ?? q,
+        q: apiQ,
         loc: overrides?.loc ?? loc,
-        category: overrides?.category ?? selectedCategory,
+        category: searchCat,
         state_id: overrides?.state_id ? Number(overrides.state_id) : (selectedState ? Number(selectedState) : undefined),
         district_id: overrides?.district_id ? Number(overrides.district_id) : (selectedDistrict ? Number(selectedDistrict) : undefined),
         page: overrides?.page ?? page,
@@ -89,7 +98,6 @@ function SearchResults() {
     );
     if (catMatch) {
       setSelectedCategory((prev) => prev || catMatch.cat_name);
-      setQ(""); // Clear text query so we don't overly restrict results
       return; // category matched — skip state check
     }
 
@@ -102,7 +110,6 @@ function SearchResults() {
     );
     if (stateMatch) {
       setSelectedState((prev) => prev || String(stateMatch.id));
-      setQ(""); // Clear text query
     }
   }, [categories, states]);
 
