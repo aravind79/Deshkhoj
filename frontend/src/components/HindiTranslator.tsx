@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Languages, X, Loader2 } from 'lucide-react';
+import { X, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function HindiTranslator() {
@@ -44,7 +44,6 @@ export default function HindiTranslator() {
     setIsInitializing(true);
     
     // 1. Set the cookie which Google Translate looks for on page load
-    // For localhost, we use empty domain or same domain
     const cookieString = `googtrans=/en/${lang}; path=/;`;
     document.cookie = cookieString;
     
@@ -57,10 +56,9 @@ export default function HindiTranslator() {
       setTimeout(() => {
         setIsInitializing(false);
         setIsOpen(false);
-        if (lang !== activeLang) window.location.reload(); // Hard refresh to ensure hydration matches
+        if (lang !== activeLang) window.location.reload();
       }, 500);
     } else {
-       // Just refresh if selector isn't ready
        window.location.reload();
     }
   };
@@ -77,8 +75,17 @@ export default function HindiTranslator() {
           whileTap={{ scale: 0.95 }}
           onClick={() => setIsOpen(!isOpen)}
           className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-2xl shadow-primary/30 outline-none"
+          aria-label="Toggle language"
         >
-          {isOpen ? <X className="h-6 w-6" /> : <Languages className="h-6 w-6" />}
+          {isOpen ? (
+            <X className="h-6 w-6" />
+          ) : (
+            /* Hindi (अ) + English (A) bilingual symbol */
+            <span className="flex items-baseline gap-[2px] font-black leading-none select-none">
+              <span className="text-[18px] leading-none">अ</span>
+              <span className="text-[11px] opacity-80 leading-none">A</span>
+            </span>
+          )}
         </motion.button>
 
         <AnimatePresence>

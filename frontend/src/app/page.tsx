@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { ArrowRight, Search } from "lucide-react";
+import { ArrowRight, Search, ArrowRight as SearchArrow } from "lucide-react";
 import { api } from "@/lib/api";
 
 const POPULAR_CATEGORIES = [
@@ -176,9 +176,10 @@ export default function Home() {
               />
               <button
                 onClick={handleSearch}
-                className="m-1.5 rounded-full bg-primary px-6 py-3 text-sm font-black text-white transition-all hover:bg-primary-hover active:scale-95"
+                className="m-1.5 rounded-full bg-primary px-3 sm:px-6 py-3 text-sm font-black text-white transition-all hover:bg-primary-hover active:scale-95 flex items-center gap-1"
               >
-                Search
+                <span className="hidden sm:inline">Search</span>
+                <SearchArrow className="h-5 w-5 sm:hidden" />
               </button>
             </div>
             <p className="mt-3 text-sm font-medium text-white/80">

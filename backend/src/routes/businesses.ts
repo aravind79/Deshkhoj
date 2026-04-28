@@ -101,8 +101,13 @@ router.get('/', async (req: Request, res: Response) => {
     }
 
     if (category) {
-      conditions.push(`d.shop_categories LIKE ?`);
-      params.push(`%${category}%`);
+      conditions.push(`(
+        d.shop_categories LIKE ? OR
+        d.category_1 LIKE ? OR
+        d.category_2 LIKE ? OR
+        d.category_3 LIKE ?
+      )`);
+      params.push(`%${category}%`, `%${category}%`, `%${category}%`, `%${category}%`);
     }
 
     if (state_id) {

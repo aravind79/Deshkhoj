@@ -30,13 +30,14 @@ function SearchResults() {
   const [page, setPage] = useState(1);
   const [inquiryShop, setInquiryShop] = useState<Business | null>(null);
 
-  const fetchResults = useCallback(async (overrides?: { q?: string; loc?: string; page?: number; district_id?: string; category?: string }) => {
+  const fetchResults = useCallback(async (overrides?: { q?: string; loc?: string; page?: number; state_id?: string; district_id?: string; category?: string }) => {
     setLoading(true);
     try {
       const res = await api.businesses.search({
         q: overrides?.q ?? q,
         loc: overrides?.loc ?? loc,
         category: overrides?.category ?? selectedCategory,
+        state_id: overrides?.state_id ? Number(overrides.state_id) : (selectedState ? Number(selectedState) : undefined),
         district_id: overrides?.district_id ? Number(overrides.district_id) : (selectedDistrict ? Number(selectedDistrict) : undefined),
         page: overrides?.page ?? page,
         limit: 10,
@@ -48,7 +49,7 @@ function SearchResults() {
     } finally {
       setLoading(false);
     }
-  }, [q, loc, selectedDistrict, selectedCategory, page]);
+  }, [q, loc, selectedState, selectedDistrict, selectedCategory, page]);
 
   // Load states and categories once
   useEffect(() => {
@@ -70,6 +71,39 @@ function SearchResults() {
     setSelectedDistrict("");
   }, [selectedState]);
 
+  // Smart auto-select: match URL query against categories/states (runs once when both are loaded)
+  // Best practice: category takes priority; q text is kept so both text + filter apply
+  useEffect(() => {
+    if (!categories.length || !states.length || !initialQ) return;
+    const qLower = initialQ.toLowerCase();
+
+    // 1. Try category match first (higher priority)
+    const catMatch = categories.find(
+      (c) =>
+        c.cat_name &&
+        (
+          c.cat_name.toLowerCase() === qLower ||
+          c.cat_name.toLowerCase().includes(qLower) ||
+          qLower.includes(c.cat_name.toLowerCase())
+        )
+    );
+    if (catMatch) {
+      setSelectedCategory((prev) => prev || catMatch.cat_name);
+      return; // category matched — skip state check
+    }
+
+    // 2. Try state match only if no category matched
+    const stateMatch = states.find(
+      (s) =>
+        s.name.toLowerCase() === qLower ||
+        s.name.toLowerCase().includes(qLower) ||
+        qLower.includes(s.name.toLowerCase())
+    );
+    if (stateMatch) {
+      setSelectedState((prev) => prev || String(stateMatch.id));
+    }
+  }, [categories, states]);
+
   // Live Search Effect (Debounced)
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -79,11 +113,11 @@ function SearchResults() {
     return () => clearTimeout(timer);
   }, [q, loc]);
 
-  // Category and Location effects
+  // Category, State and District filter effects
   useEffect(() => {
     setPage(1);
     fetchResults({ page: 1 });
-  }, [selectedCategory, selectedDistrict]);
+  }, [selectedCategory, selectedState, selectedDistrict]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
