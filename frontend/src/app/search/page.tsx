@@ -36,9 +36,13 @@ function SearchResults() {
       const searchQ = overrides?.q ?? q;
       const searchCat = overrides?.category ?? selectedCategory;
 
-      // Smart Logic: If the text query matches the category (e.g. "Cake Shop" vs "Cake Shop"),
-      // we ignore the text query for the API call to avoid over-filtering.
-      const apiQ = (searchQ && searchCat && searchQ.toLowerCase().trim() === searchCat.toLowerCase().trim())
+      // Smart Logic: If the text query matches or is part of the category name 
+      // (e.g. "Cake Shop" vs "Bakery/Cake Shop"), we ignore the text query for the 
+      // API call to avoid over-filtering the results.
+      const apiQ = (searchQ && searchCat && (
+        searchQ.toLowerCase().trim().includes(searchCat.toLowerCase().trim()) ||
+        searchCat.toLowerCase().trim().includes(searchQ.toLowerCase().trim())
+      ))
         ? ""
         : searchQ;
 
