@@ -89,6 +89,7 @@ function SearchResults() {
     );
     if (catMatch) {
       setSelectedCategory((prev) => prev || catMatch.cat_name);
+      setQ(""); // Clear text query so we don't overly restrict results
       return; // category matched — skip state check
     }
 
@@ -101,6 +102,7 @@ function SearchResults() {
     );
     if (stateMatch) {
       setSelectedState((prev) => prev || String(stateMatch.id));
+      setQ(""); // Clear text query
     }
   }, [categories, states]);
 
