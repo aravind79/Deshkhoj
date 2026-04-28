@@ -85,52 +85,40 @@ router.get('/', async (req: Request, res: Response) => {
 
     const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
 
-    // PUBLIC SEARCH: Show all businesses
-    const conditions: string[] = [];
+    // PUBLIC SEARCH: Show all valid businesses (filter out blank/bad records)
+    const conditions: string[] = [`(d.dukaan_name IS NOT NULL AND d.dukaan_name != '' AND d.dukaan_name != '.')`];
     const params: any[] = [];
-    let paramIndex = 1;
 
     if (q) {
-      conditions.push(`(d.dukaan_name LIKE ? OR d.dukaan_desc LIKE ? OR d.dukaan_addr LIKE ?)`);
-      params.push(`%${q}%`, `%${q}%`, `%${q}%`);
+      // Super search: match name, description, address AND all category columns
+      conditions.push(`(d.dukaan_name LIKE ? OR d.dukaan_desc LIKE ? OR d.dukaan_addr LIKE ? OR d.shop_categories LIKE ? OR d.category_1 LIKE ? OR d.category_2 LIKE ? OR d.category_3 LIKE ?)`);
+      params.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
     }
-
     if (loc) {
       conditions.push(`d.dukaan_addr LIKE ?`);
       params.push(`%${loc}%`);
     }
-
     if (category) {
-      conditions.push(`(
-        d.shop_categories LIKE ? OR
-        d.category_1 LIKE ? OR
-        d.category_2 LIKE ? OR
-        d.category_3 LIKE ?
-      )`);
+      conditions.push(`(d.shop_categories LIKE ? OR d.category_1 LIKE ? OR d.category_2 LIKE ? OR d.category_3 LIKE ?)`);
       params.push(`%${category}%`, `%${category}%`, `%${category}%`, `%${category}%`);
     }
-
     if (state_id) {
       conditions.push(`d.state_id = ?`);
       params.push(state_id);
     }
-
     if (district_id) {
       conditions.push(`d.district_id = ?`);
       params.push(district_id);
     }
-
     if (block_id) {
       conditions.push(`d.block_id = ?`);
       params.push(block_id);
     }
-
     if (village_id) {
       conditions.push(`d.village_id = ?`);
       params.push(village_id);
     }
-
-    const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    const whereClause = `WHERE ${conditions.join(' AND ')}`;
 
     // Get Total Count
     const countResult = await query(

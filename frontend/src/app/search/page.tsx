@@ -33,24 +33,10 @@ function SearchResults() {
   const fetchResults = useCallback(async (overrides?: { q?: string; loc?: string; page?: number; state_id?: string; district_id?: string; category?: string }) => {
     setLoading(true);
     try {
-      const searchQ = overrides?.q ?? q;
-      const searchCat = overrides?.category ?? selectedCategory;
-
-      // Smart Logic: If the text query matches or is part of the category name 
-      // (e.g. "Cake Shop" vs "Bakery/Cake Shop"), we ignore the text query for the 
-      // API call to avoid over-filtering the results.
-      // We only do this if a specific category is selected (not empty).
-      const apiQ = (searchQ && searchCat && searchCat !== "" && (
-        searchQ.toLowerCase().trim().includes(searchCat.toLowerCase().trim()) ||
-        searchCat.toLowerCase().trim().includes(searchQ.toLowerCase().trim())
-      ))
-        ? ""
-        : searchQ;
-
       const res = await api.businesses.search({
-        q: apiQ,
+        q: overrides?.q ?? q,
         loc: overrides?.loc ?? loc,
-        category: searchCat,
+        category: overrides?.category ?? selectedCategory,
         state_id: overrides?.state_id ? Number(overrides.state_id) : (selectedState ? Number(selectedState) : undefined),
         district_id: overrides?.district_id ? Number(overrides.district_id) : (selectedDistrict ? Number(selectedDistrict) : undefined),
         page: overrides?.page ?? page,
@@ -86,9 +72,11 @@ function SearchResults() {
   }, [selectedState]);
 
   // Smart auto-select: match URL query against categories/states (runs once when both are loaded)
-  // Best practice: category takes priority; q text is kept so both text + filter apply
+  // Uses a ref guard so it only runs once and does NOT re-trigger duplicate fetches
+  const autoSelectDone = useState(false);
   useEffect(() => {
-    if (!categories.length || !states.length || !initialQ) return;
+    if (!categories.length || !states.length || !initialQ || autoSelectDone[0]) return;
+    autoSelectDone[1](true); // Mark as done
     const qLower = initialQ.toLowerCase();
 
     // 1. Try category match first (higher priority)
@@ -103,7 +91,7 @@ function SearchResults() {
     );
     if (catMatch) {
       setSelectedCategory((prev) => prev || catMatch.cat_name);
-      return; // category matched — skip state check
+      return;
     }
 
     // 2. Try state match only if no category matched
@@ -146,14 +134,16 @@ function SearchResults() {
 
   return (
     <div className="container mx-auto px-4 py-8 md:px-6">
-      {/* Search Bar */}
-      <div className="mb-8 flex flex-col gap-3 sm:flex-row">
-        <div className="flex flex-1 overflow-hidden rounded-full border border-card-border bg-card-bg shadow-sm focus-within:ring-2 focus-within:ring-primary">
-          <div className="flex items-center gap-2 border-r border-card-border px-4 py-2 min-w-[130px]">
+      {/* Search Bar - 2 rows on mobile */}
+      <div className="mb-8 flex flex-col gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
+          {/* Row 1 on mobile: Location */}
+          <div className="flex items-center gap-2 rounded-full border border-card-border bg-card-bg shadow-sm px-4 py-3 focus-within:ring-2 focus-within:ring-primary sm:min-w-[180px]">
             <MapPin className="h-4 w-4 text-primary flex-shrink-0" />
-            <input value={loc} onChange={(e) => setLoc(e.target.value)} type="text" placeholder="Location" className="w-full bg-transparent text-sm outline-none placeholder:text-foreground/40" />
+            <input value={loc} onChange={(e) => setLoc(e.target.value)} type="text" placeholder="Enter location..." className="w-full bg-transparent text-sm outline-none placeholder:text-foreground/40" />
           </div>
-          <div className="flex flex-1 items-center gap-2 px-4 py-2">
+          {/* Row 2 on mobile: Search */}
+          <div className="flex flex-1 items-center gap-2 rounded-full border border-card-border bg-card-bg shadow-sm px-4 py-3 focus-within:ring-2 focus-within:ring-primary">
             <Search className="h-4 w-4 text-foreground/40 flex-shrink-0" />
             <input value={q} onChange={(e) => setQ(e.target.value)} type="text" placeholder="What are you looking for?" className="w-full bg-transparent text-sm outline-none placeholder:text-foreground/40" />
           </div>
