@@ -134,19 +134,29 @@ function SearchResults() {
 
   return (
     <div className="container mx-auto px-4 py-8 md:px-6">
-      {/* Search Bar - 2 rows on mobile */}
-      <div className="mb-8 flex flex-col gap-3">
-        <div className="flex flex-col sm:flex-row gap-3">
-          {/* Row 1 on mobile: Location */}
-          <div className="flex items-center gap-2 rounded-full border border-card-border bg-card-bg shadow-sm px-4 py-3 focus-within:ring-2 focus-within:ring-primary sm:min-w-[180px]">
-            <MapPin className="h-4 w-4 text-primary flex-shrink-0" />
-            <input value={loc} onChange={(e) => setLoc(e.target.value)} type="text" placeholder="Enter location..." className="w-full bg-transparent text-sm outline-none placeholder:text-foreground/40" />
-          </div>
-          {/* Row 2 on mobile: Search */}
-          <div className="flex flex-1 items-center gap-2 rounded-full border border-card-border bg-card-bg shadow-sm px-4 py-3 focus-within:ring-2 focus-within:ring-primary">
-            <Search className="h-4 w-4 text-foreground/40 flex-shrink-0" />
-            <input value={q} onChange={(e) => setQ(e.target.value)} type="text" placeholder="What are you looking for?" className="w-full bg-transparent text-sm outline-none placeholder:text-foreground/40" />
-          </div>
+      {/* Search Bar — stacks vertically on mobile, side-by-side on desktop */}
+      <div className="mb-8 flex flex-col gap-3 sm:flex-row">
+        {/* Row 1 on mobile: Location */}
+        <div className="flex w-full items-center gap-2 rounded-full border border-card-border bg-card-bg shadow-sm px-4 py-3 focus-within:ring-2 focus-within:ring-primary sm:w-auto sm:min-w-[200px]">
+          <MapPin className="h-4 w-4 text-primary flex-shrink-0" />
+          <input
+            value={loc}
+            onChange={(e) => setLoc(e.target.value)}
+            type="text"
+            placeholder="Enter location..."
+            className="w-full bg-transparent text-sm outline-none placeholder:text-foreground/40"
+          />
+        </div>
+        {/* Row 2 on mobile: What are you looking for */}
+        <div className="flex w-full flex-1 items-center gap-2 rounded-full border border-card-border bg-card-bg shadow-sm px-4 py-3 focus-within:ring-2 focus-within:ring-primary">
+          <Search className="h-4 w-4 text-foreground/40 flex-shrink-0" />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            type="text"
+            placeholder="What are you looking for?"
+            className="w-full bg-transparent text-sm outline-none placeholder:text-foreground/40"
+          />
         </div>
       </div>
 
