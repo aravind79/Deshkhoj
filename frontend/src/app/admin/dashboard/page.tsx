@@ -189,6 +189,35 @@ export default function AdminDashboard() {
     router.push("/admin");
   };
 
+  const downloadInquiriesCSV = () => {
+    if (inquiries.length === 0) return;
+    const headers = ["ID", "Name", "Business Name", "Phone", "Category", "Interested Product", "Message", "Shop Name", "Date"];
+    const csvContent = [
+      headers.join(","),
+      ...inquiries.map(i => [
+        i.id,
+        `"${(i.name || "").replace(/"/g, '""')}"`,
+        `"${(i.business_name || "").replace(/"/g, '""')}"`,
+        `"${(i.phone_number || "").replace(/"/g, '""')}"`,
+        `"${(i.category || "").replace(/"/g, '""')}"`,
+        `"${(i.interested_product || "").replace(/"/g, '""')}"`,
+        `"${(i.description || "").replace(/"/g, '""')}"`,
+        `"${(i.shop_name || "").replace(/"/g, '""')}"`,
+        new Date(i.created_at).toLocaleDateString()
+      ].join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `deshkhoj_inquiries_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const filteredPending = pendingItems.filter(item => 
     item.dukaan_name?.toLowerCase().includes(adminSearch.toLowerCase()) ||
     item.contact_no?.toLowerCase().includes(adminSearch.toLowerCase()) ||
@@ -199,6 +228,13 @@ export default function AdminDashboard() {
     item.dukaan_name?.toLowerCase().includes(adminSearch.toLowerCase()) ||
     item.contact_no?.toLowerCase().includes(adminSearch.toLowerCase()) ||
     item.shop_categories?.toLowerCase().includes(adminSearch.toLowerCase())
+  );
+
+  const filteredInquiries = inquiries.filter(item => 
+    item.name?.toLowerCase().includes(adminSearch.toLowerCase()) ||
+    item.phone_number?.toLowerCase().includes(adminSearch.toLowerCase()) ||
+    item.shop_name?.toLowerCase().includes(adminSearch.toLowerCase()) ||
+    item.interested_product?.toLowerCase().includes(adminSearch.toLowerCase())
   );
 
   if (loading) {
@@ -357,44 +393,55 @@ export default function AdminDashboard() {
                       <p className="mt-4 font-bold text-foreground/40 uppercase tracking-widest text-[10px]">No inquiries received yet</p>
                     </div>
                   ) : (
-                    inquiries.map((inquiry) => (
-                      <div key={inquiry.id} className="rounded-2xl border border-card-border bg-card-bg p-5 shadow-sm">
-                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                          <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-xs font-black text-primary uppercase">INQUIRY</span>
-                              <span className="text-[10px] text-foreground/40">{new Date(inquiry.created_at).toLocaleDateString()}</span>
-                            </div>
-                            <h3 className="font-bold text-foreground text-lg">{inquiry.name}</h3>
-                            <p className="text-sm font-medium text-foreground/60">{inquiry.phone_number}</p>
-                            
-                            <div className="mt-4 grid grid-cols-2 gap-x-8 gap-y-2 border-t border-card-border/50 pt-4">
-                              <div>
-                                <p className="text-[10px] font-bold text-foreground/30 uppercase">Target Shop</p>
-                                <p className="text-sm font-bold text-foreground">{inquiry.shop_name}</p>
-                              </div>
-                              <div>
-                                <p className="text-[10px] font-bold text-foreground/30 uppercase">Interest</p>
-                                <p className="text-sm font-bold text-primary">{inquiry.interested_product || inquiry.category || 'General'}</p>
-                              </div>
-                              {inquiry.description && (
-                                <div className="col-span-2 mt-2">
-                                  <p className="text-[10px] font-bold text-foreground/30 uppercase">Message</p>
-                                  <p className="text-sm text-foreground/70 leading-relaxed italic">"{inquiry.description}"</p>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          
-                          <button 
-                            onClick={() => window.open(`tel:${inquiry.phone_number}`)}
-                            className="flex items-center gap-2 rounded-xl bg-primary/10 text-primary px-4 py-2 text-xs font-black hover:bg-primary/20 transition-all"
-                          >
-                            <Phone className="h-3 w-3" /> CALL NOW
-                          </button>
-                        </div>
+                    <>
+                      <div className="flex justify-between items-center mb-4">
+                        <p className="text-[10px] font-black uppercase text-foreground/40 tracking-widest">Showing {filteredInquiries.length} inquiries</p>
+                        <button 
+                          onClick={downloadInquiriesCSV}
+                          className="flex items-center gap-2 text-[10px] font-black text-primary hover:underline uppercase tracking-widest"
+                        >
+                          <FileDown className="h-3 w-3" /> Download CSV
+                        </button>
                       </div>
-                    ))
+                      {filteredInquiries.map((inquiry) => (
+                        <div key={inquiry.id} className="rounded-2xl border border-card-border bg-card-bg p-5 shadow-sm">
+                          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs font-black text-primary uppercase">INQUIRY</span>
+                                <span className="text-[10px] text-foreground/40">{new Date(inquiry.created_at).toLocaleDateString()}</span>
+                              </div>
+                              <h3 className="font-bold text-foreground text-lg">{inquiry.name}</h3>
+                              <p className="text-sm font-medium text-foreground/60">{inquiry.phone_number}</p>
+                              
+                              <div className="mt-4 grid grid-cols-2 gap-x-8 gap-y-2 border-t border-card-border/50 pt-4">
+                                <div>
+                                  <p className="text-[10px] font-bold text-foreground/30 uppercase">Target Shop</p>
+                                  <p className="text-sm font-bold text-foreground">{inquiry.shop_name}</p>
+                                </div>
+                                <div>
+                                  <p className="text-[10px] font-bold text-foreground/30 uppercase">Interest</p>
+                                  <p className="text-sm font-bold text-primary">{inquiry.interested_product || inquiry.category || 'General'}</p>
+                                </div>
+                                {inquiry.description && (
+                                  <div className="col-span-2 mt-2">
+                                    <p className="text-[10px] font-bold text-foreground/30 uppercase">Message</p>
+                                    <p className="text-sm text-foreground/70 leading-relaxed italic">"{inquiry.description}"</p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            
+                            <button 
+                              onClick={() => window.open(`tel:${inquiry.phone_number}`)}
+                              className="flex items-center gap-2 rounded-xl bg-primary/10 text-primary px-4 py-2 text-xs font-black hover:bg-primary/20 transition-all"
+                            >
+                              <Phone className="h-3 w-3" /> CALL NOW
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </>
                   )}
                 </motion.div>
               )}
