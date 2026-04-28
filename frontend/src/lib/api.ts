@@ -165,6 +165,7 @@ export const api = {
       interested_product?: string;
       description?: string;
     }) => apiFetch<{ success: boolean; message: string }>('/inquiries', { method: 'POST', body: JSON.stringify(body) }),
+    list: () => apiFetch<{ success: boolean; data: any[] }>('/inquiries'),
   },
 
   // ---------- Messages ----------

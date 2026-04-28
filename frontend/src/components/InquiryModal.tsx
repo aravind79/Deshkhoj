@@ -94,7 +94,7 @@ export default function InquiryModal({ isOpen, onClose, shopId, initialData }: I
               </div>
             </div>
 
-            <div className="p-8">
+            <div className="p-8 max-h-[80vh] overflow-y-auto custom-scrollbar">
               {isSuccess ? (
                 <div className="flex flex-col items-center justify-center py-10 text-center">
                   <div className="h-20 w-20 rounded-full bg-green-100 flex items-center justify-center text-green-600 mb-6">
@@ -114,7 +114,7 @@ export default function InquiryModal({ isOpen, onClose, shopId, initialData }: I
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Name */}
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-wider text-foreground/40 ml-1">Your Name *</label>
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 ml-1">Your Name *</label>
                       <div className="relative group">
                          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-foreground/30 group-focus-within:text-primary transition">
                            <User className="h-4 w-4" />
@@ -131,7 +131,7 @@ export default function InquiryModal({ isOpen, onClose, shopId, initialData }: I
 
                     {/* Phone Number */}
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-wider text-foreground/40 ml-1">Phone Number *</label>
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 ml-1">Phone Number *</label>
                       <div className="relative group">
                          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-foreground/30 group-focus-within:text-primary transition">
                            <Phone className="h-4 w-4" />
@@ -150,7 +150,7 @@ export default function InquiryModal({ isOpen, onClose, shopId, initialData }: I
 
                   {/* Business Name */}
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-foreground/40 ml-1">Business Name (Optional)</label>
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 ml-1">Business Name (Optional)</label>
                     <div className="relative group">
                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-foreground/30 group-focus-within:text-primary transition">
                          <Building className="h-4 w-4" />
@@ -167,7 +167,7 @@ export default function InquiryModal({ isOpen, onClose, shopId, initialData }: I
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Category */}
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-wider text-foreground/40 ml-1">Category</label>
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 ml-1">Category</label>
                       <div className="relative group">
                          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-foreground/30 group-focus-within:text-primary transition">
                            <Tag className="h-4 w-4" />
@@ -183,7 +183,7 @@ export default function InquiryModal({ isOpen, onClose, shopId, initialData }: I
 
                     {/* Product */}
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-wider text-foreground/40 ml-1">Interested Product</label>
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 ml-1">Interested Product</label>
                       <div className="relative group">
                          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-foreground/30 group-focus-within:text-primary transition">
                            <Package className="h-4 w-4" />
@@ -200,7 +200,7 @@ export default function InquiryModal({ isOpen, onClose, shopId, initialData }: I
 
                   {/* Description */}
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-foreground/40 ml-1">Requirement Details</label>
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 ml-1">Requirement Details</label>
                     <div className="relative group">
                        <div className="absolute left-4 top-6 text-foreground/30 group-focus-within:text-primary transition">
                          <FileText className="h-4 w-4" />

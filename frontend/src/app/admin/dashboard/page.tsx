@@ -37,7 +37,8 @@ export default function AdminDashboard() {
   const [user, setUser] = useState<any>(null);
   const [pendingItems, setPendingItems] = useState<any[]>([]);
   const [allItems, setAllItems] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'pending' | 'all'>('pending');
+  const [inquiries, setInquiries] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'pending' | 'all' | 'inquiries'>('pending');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
@@ -75,6 +76,9 @@ export default function AdminDashboard() {
             setTotalRecords((allRes as any).meta.total);
           }
         }
+
+        const inquiryRes = await api.inquiries.list();
+        if (inquiryRes.success) setInquiries(inquiryRes.data);
       } catch (err) {
         console.error("Fetch error:", err);
       } finally {
@@ -271,6 +275,12 @@ export default function AdminDashboard() {
                >
                  All Records ({totalRecords})
                </button>
+               <button 
+                onClick={() => setActiveTab('inquiries')}
+                className={`pb-2 text-sm font-bold transition-all ${activeTab === 'inquiries' ? 'text-primary border-b-2 border-primary' : 'text-foreground/40 hover:text-foreground/60'}`}
+               >
+                 Inquiries ({inquiries.length})
+               </button>
             </div>
             
             <div className="relative flex-1 max-w-sm">
@@ -333,7 +343,63 @@ export default function AdminDashboard() {
                 </motion.div>
               )}
 
-              {activeTab === 'all' && totalPages > 1 && (
+              {activeTab === 'inquiries' && (
+                <motion.div 
+                  key="inquiries"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  className="space-y-4"
+                >
+                  {inquiries.length === 0 ? (
+                    <div className="rounded-3xl border border-dashed border-card-border bg-card-bg/50 p-12 text-center">
+                      <ShoppingBag className="mx-auto h-12 w-12 text-foreground/20" />
+                      <p className="mt-4 font-bold text-foreground/40 uppercase tracking-widest text-[10px]">No inquiries received yet</p>
+                    </div>
+                  ) : (
+                    inquiries.map((inquiry) => (
+                      <div key={inquiry.id} className="rounded-2xl border border-card-border bg-card-bg p-5 shadow-sm">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xs font-black text-primary uppercase">INQUIRY</span>
+                              <span className="text-[10px] text-foreground/40">{new Date(inquiry.created_at).toLocaleDateString()}</span>
+                            </div>
+                            <h3 className="font-bold text-foreground text-lg">{inquiry.name}</h3>
+                            <p className="text-sm font-medium text-foreground/60">{inquiry.phone_number}</p>
+                            
+                            <div className="mt-4 grid grid-cols-2 gap-x-8 gap-y-2 border-t border-card-border/50 pt-4">
+                              <div>
+                                <p className="text-[10px] font-bold text-foreground/30 uppercase">Target Shop</p>
+                                <p className="text-sm font-bold text-foreground">{inquiry.shop_name}</p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] font-bold text-foreground/30 uppercase">Interest</p>
+                                <p className="text-sm font-bold text-primary">{inquiry.interested_product || inquiry.category || 'General'}</p>
+                              </div>
+                              {inquiry.description && (
+                                <div className="col-span-2 mt-2">
+                                  <p className="text-[10px] font-bold text-foreground/30 uppercase">Message</p>
+                                  <p className="text-sm text-foreground/70 leading-relaxed italic">"{inquiry.description}"</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          
+                          <button 
+                            onClick={() => window.open(`tel:${inquiry.phone_number}`)}
+                            className="flex items-center gap-2 rounded-xl bg-primary/10 text-primary px-4 py-2 text-xs font-black hover:bg-primary/20 transition-all"
+                          >
+                            <Phone className="h-3 w-3" /> CALL NOW
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </motion.div>
+              )}
+
+              {(activeTab === 'all') && totalPages > 1 && (
                 <div className="flex items-center justify-center gap-4 mt-8 pb-4">
                   <button
                     disabled={page === 1}
