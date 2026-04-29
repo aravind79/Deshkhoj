@@ -29,27 +29,26 @@ process.on('unhandledRejection', (reason, promise) => {
 
 const app = express();
 
-// --- Security & Rate Limiting ---
-app.use(helmet());
-// app.use(
-//   rateLimit({
-//     windowMs: 15 * 60 * 1000, // 15 minutes
-//     max: 200,
-//     standardHeaders: true,
-//     legacyHeaders: false,
-//   })
-// );
+// --- Trust Proxy (Critical for Hostinger/Vercel) ---
+app.set('trust proxy', 1);
 
-// --- CORS ---
-app.options(/.*/, cors()); // Handle OPTIONS preflight for all routes
-app.use(
-  cors({
-    origin: '*',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-    credentials: false,
-  })
-);
+// --- Global CORS (Must be at the TOP) ---
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  credentials: false
+}));
+
+// Pre-flight for all routes
+app.options('*', (req, res) => {
+  res.sendStatus(204);
+});
+
+// --- Security & Rate Limiting ---
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 
 // --- Body Parsing ---
 app.use(express.json({ limit: '10mb' }));

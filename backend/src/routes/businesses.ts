@@ -128,17 +128,29 @@ router.get('/', async (req: Request, res: Response) => {
       params.push(`%${loc}%`);
     }
     if (category) {
-      const catTerm = `%${category.trim()}%`;
-      let catCondition = `(d.category_1 LIKE ? OR d.category_2 LIKE ? OR d.category_3 LIKE ? OR d.dukaan_name LIKE ? OR d.dukaan_desc LIKE ?)`;
+      const searchTerm = category.trim();
+      const searchParts = searchTerm.split(/[\/\s-]+/).filter(t => t.length > 2);
+      
+      // Basic conditions for the full term
+      const catTerm = `%${searchTerm}%`;
+      let catConditionParts = [`d.category_1 LIKE ?`, `d.category_2 LIKE ?`, `d.category_3 LIKE ?`, `d.dukaan_name LIKE ?`, `d.dukaan_desc LIKE ?`];
       const catParams = [catTerm, catTerm, catTerm, catTerm, catTerm];
 
+      // Add conditions for each keyword part (e.g., "Bakery" or "Cake")
+      searchParts.forEach(part => {
+        const partTerm = `%${part}%`;
+        catConditionParts.push(`d.category_1 LIKE ?`, `d.category_2 LIKE ?`, `d.category_3 LIKE ?`, `d.dukaan_name LIKE ?`, `d.dukaan_desc LIKE ?`);
+        catParams.push(partTerm, partTerm, partTerm, partTerm, partTerm);
+      });
+
       if (categoryIds.length > 0) {
-        const idConditions = categoryIds.map(() => `FIND_IN_SET(?, d.shop_categories)`).join(' OR ');
-        catCondition = `(${catCondition} OR ${idConditions})`;
-        categoryIds.forEach(id => catParams.push(id.toString()));
+        categoryIds.forEach(id => {
+          catConditionParts.push(`FIND_IN_SET(?, d.shop_categories)`);
+          catParams.push(id.toString());
+        });
       }
 
-      conditions.push(catCondition);
+      conditions.push(`(${catConditionParts.join(' OR ')})`);
       params.push(...catParams);
     }
     if (state_id) {
