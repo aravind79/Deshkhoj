@@ -135,9 +135,9 @@ function SearchResults() {
   return (
     <div className="container mx-auto px-4 py-8 md:px-6">
       {/* Search Bar — stacks vertically on mobile, side-by-side on desktop */}
-      <div className="mb-8 flex flex-col gap-3 sm:flex-row">
+      <div className="mb-8 flex flex-col gap-4 md:flex-row">
         {/* Row 1 on mobile: Location */}
-        <div className="flex w-full items-center gap-2 rounded-full border border-card-border bg-card-bg shadow-sm px-4 py-3 focus-within:ring-2 focus-within:ring-primary sm:w-auto sm:min-w-[200px]">
+        <div className="flex w-full items-center gap-2 rounded-full border border-card-border bg-card-bg shadow-sm px-4 py-3 focus-within:ring-2 focus-within:ring-primary md:w-auto md:min-w-[240px]">
           <MapPin className="h-4 w-4 text-primary flex-shrink-0" />
           <input
             value={loc}

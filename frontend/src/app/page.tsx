@@ -81,6 +81,7 @@ const STORY_CARDS = [
 export default function Home() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
+  const [locationQuery, setLocationQuery] = useState("");
   const [counts, setCounts] = useState({ businesses: 0, towns: 0, states: 0 });
 
   useEffect(() => {
@@ -106,11 +107,12 @@ export default function Home() {
   };
 
   const handleSearch = () => {
-    if (searchQuery.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-    } else {
-      router.push("/search");
-    }
+    const params = new URLSearchParams();
+    if (searchQuery.trim()) params.append("q", searchQuery.trim());
+    if (locationQuery.trim()) params.append("loc", locationQuery.trim());
+    
+    const queryString = params.toString();
+    router.push(queryString ? `/search?${queryString}` : "/search");
   };
 
   return (
@@ -162,24 +164,41 @@ export default function Home() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="mt-8 mx-auto max-w-xl"
+            className="mt-8 mx-auto max-w-2xl"
           >
-            <div className="flex items-center rounded-full bg-white shadow-2xl shadow-black/30 overflow-hidden">
-              <Search className="ml-5 h-5 w-5 flex-shrink-0 text-foreground/40" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                placeholder="Search businesses, products, services..."
-                className="flex-1 bg-transparent px-4 py-4 text-sm text-foreground placeholder:text-foreground/40 outline-none"
-              />
+            <div className="flex flex-col gap-3 md:flex-row md:items-center rounded-[2rem] md:rounded-full bg-white shadow-2xl shadow-black/30 overflow-hidden p-2 md:p-0">
+              {/* Location Input */}
+              <div className="flex flex-1 items-center px-4 py-3 md:py-4 border-b md:border-b-0 md:border-r border-gray-100">
+                <MapPin className="h-5 w-5 flex-shrink-0 text-primary" />
+                <input
+                  type="text"
+                  value={locationQuery}
+                  onChange={(e) => setLocationQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                  placeholder="Location..."
+                  className="flex-1 bg-transparent px-3 text-sm text-foreground placeholder:text-foreground/40 outline-none"
+                />
+              </div>
+
+              {/* Keyword Input */}
+              <div className="flex-[1.5] flex items-center px-4 py-3 md:py-4">
+                <Search className="h-5 w-5 flex-shrink-0 text-foreground/40" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                  placeholder="Search businesses, products..."
+                  className="flex-1 bg-transparent px-3 text-sm text-foreground placeholder:text-foreground/40 outline-none"
+                />
+              </div>
+
               <button
                 onClick={handleSearch}
-                className="m-1.5 rounded-full bg-primary px-3 sm:px-6 py-3 text-sm font-black text-white transition-all hover:bg-primary-hover active:scale-95 flex items-center gap-1"
+                className="rounded-full bg-primary px-8 py-3.5 text-sm font-black text-white transition-all hover:bg-primary-hover active:scale-95 flex items-center justify-center gap-2"
               >
-                <span className="hidden sm:inline">Search</span>
-                <SearchArrow className="h-5 w-5 sm:hidden" />
+                <span>Search</span>
+                <SearchArrow className="h-5 w-5" />
               </button>
             </div>
             <p className="mt-3 text-sm font-medium text-white/80">
