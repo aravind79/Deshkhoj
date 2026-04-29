@@ -89,10 +89,31 @@ router.get('/', async (req: Request, res: Response) => {
     const conditions: string[] = [`(d.dukaan_name IS NOT NULL AND d.dukaan_name != '' AND d.dukaan_name != '.')`];
     const params: any[] = [];
 
+    // Enhanced Category/Keyword Lookup: find category IDs for names
+    let categoryIds: number[] = [];
+    if (category || q) {
+      const searchTerm = category || q;
+      const catLookup = await query(
+        `SELECT id FROM product_category WHERE category_name LIKE ? OR loc_category_name LIKE ?`,
+        [`%${searchTerm}%`, `%${searchTerm}%`]
+      );
+      categoryIds = catLookup.rows.map((r: any) => r.id);
+    }
+
     if (q) {
-      // Super search: match name, description, address AND all category columns
-      conditions.push(`(d.dukaan_name LIKE ? OR d.dukaan_desc LIKE ? OR d.dukaan_addr LIKE ? OR d.shop_categories LIKE ? OR d.category_1 LIKE ? OR d.category_2 LIKE ? OR d.category_3 LIKE ?)`);
-      params.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
+      // Super search: match name, description, address, category names, category IDs, AND individual product names
+      let qCondition = `(d.dukaan_name LIKE ? OR d.dukaan_desc LIKE ? OR d.dukaan_addr LIKE ? OR d.category_1 LIKE ? OR d.category_2 LIKE ? OR d.category_3 LIKE ? OR EXISTS (SELECT 1 FROM dukaan_products dp WHERE dp.shop_id = d.id AND dp.prod_name LIKE ?))`;
+      const qParams = [`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%` ];
+      
+      if (categoryIds.length > 0) {
+        // Search for each category ID in the comma-separated list
+        const idConditions = categoryIds.map(() => `FIND_IN_SET(?, d.shop_categories)`).join(' OR ');
+        qCondition = `(${qCondition} OR ${idConditions})`;
+        categoryIds.forEach(id => qParams.push(id.toString()));
+      }
+      
+      conditions.push(qCondition);
+      params.push(...qParams);
     }
     if (loc) {
       conditions.push(`d.dukaan_addr LIKE ?`);
@@ -100,8 +121,17 @@ router.get('/', async (req: Request, res: Response) => {
     }
     if (category) {
       const catTerm = `%${category.trim()}%`;
-      conditions.push(`(d.shop_categories LIKE ? OR d.category_1 LIKE ? OR d.category_2 LIKE ? OR d.category_3 LIKE ? OR d.dukaan_name LIKE ? OR d.dukaan_desc LIKE ?)`);
-      params.push(catTerm, catTerm, catTerm, catTerm, catTerm, catTerm);
+      let catCondition = `(d.category_1 LIKE ? OR d.category_2 LIKE ? OR d.category_3 LIKE ? OR d.dukaan_name LIKE ? OR d.dukaan_desc LIKE ?)`;
+      const catParams = [catTerm, catTerm, catTerm, catTerm, catTerm];
+
+      if (categoryIds.length > 0) {
+        const idConditions = categoryIds.map(() => `FIND_IN_SET(?, d.shop_categories)`).join(' OR ');
+        catCondition = `(${catCondition} OR ${idConditions})`;
+        categoryIds.forEach(id => catParams.push(id.toString()));
+      }
+
+      conditions.push(catCondition);
+      params.push(...catParams);
     }
     if (state_id) {
       conditions.push(`s.id = ?`);
