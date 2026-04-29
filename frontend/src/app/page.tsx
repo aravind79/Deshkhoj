@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { ArrowRight, Search, ArrowRight as SearchArrow } from "lucide-react";
+import { ArrowRight, Search, MapPin, ArrowRight as SearchArrow } from "lucide-react";
 import { api } from "@/lib/api";
 
 const POPULAR_CATEGORIES = [
