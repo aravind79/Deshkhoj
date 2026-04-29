@@ -99,15 +99,16 @@ router.get('/', async (req: Request, res: Response) => {
       params.push(`%${loc}%`);
     }
     if (category) {
-      conditions.push(`(d.shop_categories LIKE ? OR d.category_1 LIKE ? OR d.category_2 LIKE ? OR d.category_3 LIKE ?)`);
-      params.push(`%${category}%`, `%${category}%`, `%${category}%`, `%${category}%`);
+      const catTerm = `%${category.trim()}%`;
+      conditions.push(`(d.shop_categories LIKE ? OR d.category_1 LIKE ? OR d.category_2 LIKE ? OR d.category_3 LIKE ? OR d.dukaan_name LIKE ? OR d.dukaan_desc LIKE ?)`);
+      params.push(catTerm, catTerm, catTerm, catTerm, catTerm, catTerm);
     }
     if (state_id) {
-      conditions.push(`d.state_id = ?`);
+      conditions.push(`s.id = ?`);
       params.push(state_id);
     }
     if (district_id) {
-      conditions.push(`d.district_id = ?`);
+      conditions.push(`dst.id = ?`);
       params.push(district_id);
     }
     if (block_id) {
@@ -118,11 +119,17 @@ router.get('/', async (req: Request, res: Response) => {
       conditions.push(`d.village_id = ?`);
       params.push(village_id);
     }
+    const joinClause = `
+      LEFT JOIN blocks b ON d.block_id = b.id
+      LEFT JOIN districts dst ON b.district_id = dst.id
+      LEFT JOIN states s ON dst.state_id = s.id
+    `;
+
     const whereClause = `WHERE ${conditions.join(' AND ')}`;
 
     // Get Total Count
     const countResult = await query(
-      `SELECT COUNT(*) as count FROM dukaan_list d ${whereClause}`,
+      `SELECT COUNT(*) as count FROM dukaan_list d ${joinClause} ${whereClause}`,
       params
     );
     const total = parseInt(countResult.rows[0]?.count || '0');
@@ -131,8 +138,10 @@ router.get('/', async (req: Request, res: Response) => {
     const queryParams = [...params, parseInt(limit as string), offset];
     const result = await query(
       `SELECT d.*,
-       COALESCE(NULLIF(d.main_photo, ''), (SELECT photo_name FROM dukaan_photos WHERE id = d.dukaan_img_id LIMIT 1)) as main_photo
+       COALESCE(NULLIF(d.main_photo, ''), (SELECT photo_name FROM dukaan_photos WHERE id = d.dukaan_img_id LIMIT 1)) as main_photo,
+       s.state_name, dst.district_name
        FROM dukaan_list d 
+       ${joinClause}
        ${whereClause} 
        ORDER BY d.id DESC 
        LIMIT ? OFFSET ?`,
