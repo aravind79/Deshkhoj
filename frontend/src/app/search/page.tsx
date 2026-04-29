@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Suspense, useEffect, useState, useCallback } from "react";
+import { Suspense, useEffect, useState, useCallback, useRef } from "react";
 import { MapPin, Star, Phone, Search, SlidersHorizontal, CheckCircle2 } from "lucide-react";
 import { api, API_BASE, type Business } from "@/lib/api";
 import InquiryModal from "@/components/InquiryModal";
@@ -29,6 +29,7 @@ function SearchResults() {
   const [selectedCategory, setSelectedCategory] = useState(initialCat);
   const [page, setPage] = useState(1);
   const [inquiryShop, setInquiryShop] = useState<Business | null>(null);
+  const resultsRef = useRef<HTMLHeadingElement>(null);
 
   const fetchResults = useCallback(async (overrides?: { q?: string; loc?: string; page?: number; state_id?: string; district_id?: string; category?: string }) => {
     setLoading(true);
@@ -48,6 +49,10 @@ function SearchResults() {
       setResults([]);
     } finally {
       setLoading(false);
+      // Auto-scroll to results on mobile/desktop when fetching completes
+      setTimeout(() => {
+        resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
     }
   }, [q, loc, selectedState, selectedDistrict, selectedCategory, page]);
 
@@ -161,7 +166,7 @@ function SearchResults() {
       </div>
 
       <div className="mb-8">
-        <h1 className="text-3xl font-black text-foreground">
+        <h1 ref={resultsRef} className="text-3xl font-black text-foreground scroll-mt-20">
           {q ? `Results for "${q}"` : "Explore Businesses"}
         </h1>
         {isFiltered && (
