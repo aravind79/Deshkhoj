@@ -19,6 +19,7 @@ import {
   X,
   Camera,
   Search,
+  Phone,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { api, API_BASE, type Business } from "@/lib/api";
