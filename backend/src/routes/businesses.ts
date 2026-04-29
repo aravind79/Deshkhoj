@@ -120,7 +120,8 @@ router.get('/', async (req: Request, res: Response) => {
       params.push(village_id);
     }
     const joinClause = `
-      LEFT JOIN blocks b ON d.block_id = b.id
+      LEFT JOIN user_list u ON d.user_id = u.id
+      LEFT JOIN blocks b ON u.block_id = b.id
       LEFT JOIN districts dst ON b.district_id = dst.id
       LEFT JOIN states s ON dst.state_id = s.id
     `;
