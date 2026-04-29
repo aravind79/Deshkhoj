@@ -89,15 +89,23 @@ router.get('/', async (req: Request, res: Response) => {
     const conditions: string[] = [`(d.dukaan_name IS NOT NULL AND d.dukaan_name != '' AND d.dukaan_name != '.')`];
     const params: any[] = [];
 
-    // Enhanced Category/Keyword Lookup: find category IDs for names
+    // Enhanced Category/Keyword Lookup: find category IDs for names (even partial/split matches)
     let categoryIds: number[] = [];
     if (category || q) {
       const searchTerm = category || q;
-      const catLookup = await query(
-        `SELECT id FROM product_category WHERE category_name LIKE ? OR loc_category_name LIKE ?`,
-        [`%${searchTerm}%`, `%${searchTerm}%`]
-      );
-      categoryIds = catLookup.rows.map((r: any) => r.id);
+      // Split by slash, space, or hyphen to match partial category names (e.g., "Bakery/Cake Shop" matches "Bakery")
+      const searchParts = searchTerm.split(/[\/\s-]+/).filter(t => t.length > 2);
+      
+      let queryStr = `SELECT id FROM product_category WHERE category_name LIKE ? OR loc_category_name LIKE ?`;
+      let queryParams = [`%${searchTerm}%`, `%${searchTerm}%` ];
+
+      if (searchParts.length > 0) {
+        queryStr += ` OR ${searchParts.map(() => `category_name LIKE ? OR loc_category_name LIKE ?`).join(' OR ')}`;
+        searchParts.forEach(part => queryParams.push(`%${part}%`, `%${part}%`));
+      }
+
+      const catLookup = await query(queryStr, queryParams);
+      categoryIds = [...new Set(catLookup.rows.map((r: any) => r.id))];
     }
 
     if (q) {
