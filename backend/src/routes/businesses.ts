@@ -89,36 +89,18 @@ router.get('/', async (req: Request, res: Response) => {
     const conditions: string[] = [`(d.dukaan_name IS NOT NULL AND d.dukaan_name != '' AND d.dukaan_name != '.')`];
     const params: any[] = [];
 
-    // Enhanced Category/Keyword Lookup: find category IDs for names (even partial/split matches)
-    let categoryIds: number[] = [];
-    if (category || q) {
-      const searchTerm = category || q;
-      const searchSpaceless = searchTerm.replace(/\s+/g, '');
-      // Split by slash, space, or hyphen to match partial category names (e.g., "Bakery/Cake Shop" matches "Bakery")
-      const searchParts = searchTerm.split(/[\/\s-]+/).filter(t => t.length > 2);
-      
-      let queryStr = `SELECT id FROM product_category WHERE category_name LIKE ? OR loc_category_name LIKE ? OR REPLACE(category_name, ' ', '') LIKE ? OR REPLACE(loc_category_name, ' ', '') LIKE ?`;
-      let queryParams = [`%${searchTerm}%`, `%${searchTerm}%`, `%${searchSpaceless}%`, `%${searchSpaceless}%`];
-
-      if (searchParts.length > 0) {
-        queryStr += ` OR ${searchParts.map(() => `category_name LIKE ? OR loc_category_name LIKE ?`).join(' OR ')}`;
-        searchParts.forEach(part => queryParams.push(`%${part}%`, `%${part}%`));
-      }
-
-      const catLookup = await query(queryStr, queryParams);
-      categoryIds = [...new Set(catLookup.rows.map((r: any) => r.id))];
-    }
 
     if (q) {
       const qSpaceless = q.replace(/\s+/g, '');
       const qTerm = `%${q}%`;
       const qSpTerm = `%${qSpaceless}%`;
 
-      // Super search: match name, description, address, category names, category IDs, AND individual product names
+      // Super search: match name, description, address, category names, AND individual product names
       let qCondition = `(
         d.dukaan_name LIKE ? OR REPLACE(d.dukaan_name, ' ', '') LIKE ? OR 
         d.dukaan_desc LIKE ? OR REPLACE(d.dukaan_desc, ' ', '') LIKE ? OR 
         d.dukaan_addr LIKE ? OR REPLACE(d.dukaan_addr, ' ', '') LIKE ? OR 
+        d.shop_categories LIKE ? OR REPLACE(d.shop_categories, ' ', '') LIKE ? OR 
         d.category_1 LIKE ? OR REPLACE(d.category_1, ' ', '') LIKE ? OR 
         d.category_2 LIKE ? OR REPLACE(d.category_2, ' ', '') LIKE ? OR 
         d.category_3 LIKE ? OR REPLACE(d.category_3, ' ', '') LIKE ? OR 
@@ -131,15 +113,9 @@ router.get('/', async (req: Request, res: Response) => {
         qTerm, qSpTerm,
         qTerm, qSpTerm,
         qTerm, qSpTerm,
+        qTerm, qSpTerm,
         qTerm, qSpTerm
       ];
-      
-      if (categoryIds.length > 0) {
-        // Search for each category ID in the comma-separated list
-        const idConditions = categoryIds.map(() => `FIND_IN_SET(?, d.shop_categories)`).join(' OR ');
-        qCondition = `(${qCondition} OR ${idConditions})`;
-        categoryIds.forEach(id => qParams.push(id.toString()));
-      }
       
       conditions.push(qCondition);
       params.push(...qParams);
@@ -157,6 +133,7 @@ router.get('/', async (req: Request, res: Response) => {
       const catTerm = `%${searchTerm}%`;
       const catSpTerm = `%${searchSpaceless}%`;
       let catConditionParts = [
+        `d.shop_categories LIKE ?`, `REPLACE(d.shop_categories, ' ', '') LIKE ?`,
         `d.category_1 LIKE ?`, `REPLACE(d.category_1, ' ', '') LIKE ?`,
         `d.category_2 LIKE ?`, `REPLACE(d.category_2, ' ', '') LIKE ?`,
         `d.category_3 LIKE ?`, `REPLACE(d.category_3, ' ', '') LIKE ?`,
@@ -168,22 +145,16 @@ router.get('/', async (req: Request, res: Response) => {
         catTerm, catSpTerm, 
         catTerm, catSpTerm, 
         catTerm, catSpTerm, 
+        catTerm, catSpTerm, 
         catTerm, catSpTerm
       ];
 
       // Add conditions for each keyword part (e.g., "Bakery" or "Cake")
       searchParts.forEach(part => {
         const partTerm = `%${part}%`;
-        catConditionParts.push(`d.category_1 LIKE ?`, `d.category_2 LIKE ?`, `d.category_3 LIKE ?`, `d.dukaan_name LIKE ?`, `d.dukaan_desc LIKE ?`);
-        catParams.push(partTerm, partTerm, partTerm, partTerm, partTerm);
+        catConditionParts.push(`d.shop_categories LIKE ?`, `d.category_1 LIKE ?`, `d.category_2 LIKE ?`, `d.category_3 LIKE ?`, `d.dukaan_name LIKE ?`, `d.dukaan_desc LIKE ?`);
+        catParams.push(partTerm, partTerm, partTerm, partTerm, partTerm, partTerm);
       });
-
-      if (categoryIds.length > 0) {
-        categoryIds.forEach(id => {
-          catConditionParts.push(`FIND_IN_SET(?, d.shop_categories)`);
-          catParams.push(id.toString());
-        });
-      }
 
       conditions.push(`(${catConditionParts.join(' OR ')})`);
       params.push(...catParams);
