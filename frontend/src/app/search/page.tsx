@@ -96,6 +96,7 @@ function SearchResults() {
     );
     if (catMatch) {
       setSelectedCategory((prev) => prev || catMatch.cat_name);
+      setQ(""); // Clear text search so it becomes a pure category filter
       return;
     }
 
@@ -167,7 +168,7 @@ function SearchResults() {
 
       <div className="mb-8">
         <h1 ref={resultsRef} className="text-3xl font-black text-foreground scroll-mt-20">
-          {q ? `Results for "${q}"` : "Explore Businesses"}
+          {q ? `Results for "${q}"` : selectedCategory ? `Results for ${selectedCategory}` : selectedState ? `Businesses in ${states.find(s => s.id.toString() === selectedState)?.name || 'State'}` : "Explore Businesses"}
         </h1>
         {isFiltered && (
           <p className="text-foreground/40 font-bold mt-1 uppercase tracking-widest text-[10px]">
