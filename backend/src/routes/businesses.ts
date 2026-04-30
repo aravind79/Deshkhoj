@@ -160,11 +160,11 @@ router.get('/', async (req: Request, res: Response) => {
       params.push(...catParams);
     }
     if (state_id) {
-      conditions.push(`s.id = ?`);
+      conditions.push(`d.state_id = ?`);
       params.push(state_id);
     }
     if (district_id) {
-      conditions.push(`dst.id = ?`);
+      conditions.push(`d.district_id = ?`);
       params.push(district_id);
     }
     if (block_id) {
@@ -175,18 +175,12 @@ router.get('/', async (req: Request, res: Response) => {
       conditions.push(`d.village_id = ?`);
       params.push(village_id);
     }
-    const joinClause = `
-      LEFT JOIN user_list u ON d.user_id = u.id
-      LEFT JOIN blocks b ON u.block_id = b.id
-      LEFT JOIN districts dst ON b.district_id = dst.id
-      LEFT JOIN states s ON dst.state_id = s.id
-    `;
 
     const whereClause = `WHERE ${conditions.join(' AND ')}`;
 
     // Get Total Count
     const countResult = await query(
-      `SELECT COUNT(*) as count FROM dukaan_list d ${joinClause} ${whereClause}`,
+      `SELECT COUNT(*) as count FROM dukaan_list d ${whereClause}`,
       params
     );
     const total = parseInt(countResult.rows[0]?.count || '0');
@@ -195,10 +189,8 @@ router.get('/', async (req: Request, res: Response) => {
     const queryParams = [...params, parseInt(limit as string), offset];
     const result = await query(
       `SELECT d.*,
-       COALESCE(NULLIF(d.main_photo, ''), (SELECT photo_name FROM dukaan_photos WHERE id = d.dukaan_img_id LIMIT 1)) as main_photo,
-       s.state_name, dst.district_name
+       COALESCE(NULLIF(d.main_photo, ''), (SELECT photo_name FROM dukaan_photos WHERE id = d.dukaan_img_id LIMIT 1)) as main_photo
        FROM dukaan_list d 
-       ${joinClause}
        ${whereClause} 
        ORDER BY d.id DESC 
        LIMIT ? OFFSET ?`,
