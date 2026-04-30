@@ -75,47 +75,129 @@ router.get('/', async (req, res) => {
         // PUBLIC SEARCH: Show all valid businesses (filter out blank/bad records)
         const conditions = [`(d.dukaan_name IS NOT NULL AND d.dukaan_name != '' AND d.dukaan_name != '.')`];
         const params = [];
+
+        // Enhanced Category/Keyword Lookup: find category IDs for names (even partial/split matches)
+        let categoryIds = [];
+        if (category || q) {
+            const searchTerm = category || q;
+            const searchSpaceless = searchTerm.replace(/\s+/g, '');
+            // Split by slash, space, or hyphen to match partial category names (e.g., "Bakery/Cake Shop" matches "Bakery")
+            const searchParts = searchTerm.split(/[\/\s-]+/).filter(t => t.length > 2);
+            let queryStr = `SELECT id FROM product_category WHERE category_name LIKE ? OR loc_category_name LIKE ? OR REPLACE(category_name, ' ', '') LIKE ? OR REPLACE(loc_category_name, ' ', '') LIKE ?`;
+            let queryParams = [`%${searchTerm}%`, `%${searchTerm}%`, `%${searchSpaceless}%`, `%${searchSpaceless}%`];
+            if (searchParts.length > 0) {
+                queryStr += ` OR ${searchParts.map(() => `category_name LIKE ? OR loc_category_name LIKE ?`).join(' OR ')}`;
+                searchParts.forEach(part => queryParams.push(`%${part}%`, `%${part}%`));
+            }
+            const catLookup = await (0, db_1.query)(queryStr, queryParams);
+            categoryIds = [...new Set(catLookup.rows.map((r) => r.id))];
+        }
+
         if (q) {
-            // Super search: match name, description, address AND all category columns
-            conditions.push(`(d.dukaan_name LIKE ? OR d.dukaan_desc LIKE ? OR d.dukaan_addr LIKE ? OR d.shop_categories LIKE ? OR d.category_1 LIKE ? OR d.category_2 LIKE ? OR d.category_3 LIKE ?)`);
-            params.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
+            const qSpaceless = q.replace(/\s+/g, '');
+            const qTerm = `%${q}%`;
+            const qSpTerm = `%${qSpaceless}%`;
+            // Super search: match name, description, address, category names, category IDs, AND individual product names
+            let qCondition = `(
+        d.dukaan_name LIKE ? OR REPLACE(d.dukaan_name, ' ', '') LIKE ? OR 
+        d.dukaan_desc LIKE ? OR REPLACE(d.dukaan_desc, ' ', '') LIKE ? OR 
+        d.dukaan_addr LIKE ? OR REPLACE(d.dukaan_addr, ' ', '') LIKE ? OR 
+        d.category_1 LIKE ? OR REPLACE(d.category_1, ' ', '') LIKE ? OR 
+        d.category_2 LIKE ? OR REPLACE(d.category_2, ' ', '') LIKE ? OR 
+        d.category_3 LIKE ? OR REPLACE(d.category_3, ' ', '') LIKE ? OR 
+        EXISTS (SELECT 1 FROM dukaan_products dp WHERE dp.shop_id = d.id AND (dp.prod_name LIKE ? OR REPLACE(dp.prod_name, ' ', '') LIKE ?))
+      )`;
+            const qParams = [
+                qTerm, qSpTerm,
+                qTerm, qSpTerm,
+                qTerm, qSpTerm,
+                qTerm, qSpTerm,
+                qTerm, qSpTerm,
+                qTerm, qSpTerm,
+                qTerm, qSpTerm
+            ];
+            if (categoryIds.length > 0) {
+                const idConditions = categoryIds.map(() => `FIND_IN_SET(?, d.shop_categories)`).join(' OR ');
+                qCondition = `(${qCondition} OR ${idConditions})`;
+                categoryIds.forEach(id => qParams.push(id.toString()));
+            }
+            conditions.push(qCondition);
+            params.push(...qParams);
         }
         if (loc) {
             conditions.push(`d.dukaan_addr LIKE ?`);
             params.push(`%${loc}%`);
         }
         if (category) {
-            conditions.push(`(d.shop_categories LIKE ? OR d.category_1 LIKE ? OR d.category_2 LIKE ? OR d.category_3 LIKE ?)`);
-            params.push(`%${category}%`, `%${category}%`, `%${category}%`, `%${category}%`);
+            const searchTerm = category.trim();
+            const searchSpaceless = searchTerm.replace(/\s+/g, '');
+            const searchParts = searchTerm.split(/[\/\s-]+/).filter(t => t.length > 2);
+            // Basic conditions for the full term
+            const catTerm = `%${searchTerm}%`;
+            const catSpTerm = `%${searchSpaceless}%`;
+            let catConditionParts = [
+                `d.category_1 LIKE ?`, `REPLACE(d.category_1, ' ', '') LIKE ?`,
+                `d.category_2 LIKE ?`, `REPLACE(d.category_2, ' ', '') LIKE ?`,
+                `d.category_3 LIKE ?`, `REPLACE(d.category_3, ' ', '') LIKE ?`,
+                `d.dukaan_name LIKE ?`, `REPLACE(d.dukaan_name, ' ', '') LIKE ?`,
+                `d.dukaan_desc LIKE ?`, `REPLACE(d.dukaan_desc, ' ', '') LIKE ?`
+            ];
+            const catParams = [
+                catTerm, catSpTerm,
+                catTerm, catSpTerm,
+                catTerm, catSpTerm,
+                catTerm, catSpTerm,
+                catTerm, catSpTerm
+            ];
+            searchParts.forEach(part => {
+                const partTerm = `%${part}%`;
+                catConditionParts.push(`d.category_1 LIKE ?`, `d.category_2 LIKE ?`, `d.category_3 LIKE ?`, `d.dukaan_name LIKE ?`, `d.dukaan_desc LIKE ?`);
+                catParams.push(partTerm, partTerm, partTerm, partTerm, partTerm);
+            });
+            if (categoryIds.length > 0) {
+                categoryIds.forEach(id => {
+                    catConditionParts.push(`FIND_IN_SET(?, d.shop_categories)`);
+                    catParams.push(id.toString());
+                });
+            }
+            conditions.push(`(${catConditionParts.join(' OR ')})`);
+            params.push(...catParams);
         }
         if (state_id) {
-            conditions.push(`d.state_id = ?`);
+            conditions.push(`s.id = ?`);
             params.push(state_id);
         }
         if (district_id) {
-            conditions.push(`d.district_id = ?`);
+            conditions.push(`dst.id = ?`);
             params.push(district_id);
         }
         if (block_id) {
-            conditions.push(`d.block_id = ?`);
+            conditions.push(`b.id = ?`);
             params.push(block_id);
         }
         if (village_id) {
             conditions.push(`d.village_id = ?`);
             params.push(village_id);
         }
+        const joinClause = `
+          LEFT JOIN user_list u ON d.user_id = u.id
+          LEFT JOIN blocks b ON u.block_id = b.id
+          LEFT JOIN districts dst ON b.district_id = dst.id
+          LEFT JOIN states s ON dst.state_id = s.id
+        `;
         const whereClause = `WHERE ${conditions.join(' AND ')}`;
         // Get Total Count
-        const countResult = await (0, db_1.query)(`SELECT COUNT(*) as count FROM dukaan_list d ${whereClause}`, params);
+        const countResult = await (0, db_1.query)(`SELECT COUNT(*) as count FROM dukaan_list d ${joinClause} ${whereClause}`, params);
         const total = parseInt(countResult.rows[0]?.count || '0');
         // Get Results - map legacy photos to main_photo
         const queryParams = [...params, parseInt(limit), offset];
         const result = await (0, db_1.query)(`SELECT d.*,
-       COALESCE(NULLIF(d.main_photo, ''), (SELECT photo_name FROM dukaan_photos WHERE id = d.dukaan_img_id LIMIT 1)) as main_photo
-       FROM dukaan_list d 
-       ${whereClause} 
-       ORDER BY d.id DESC 
-       LIMIT ? OFFSET ?`, queryParams);
+               COALESCE(NULLIF(d.main_photo, ''), (SELECT photo_name FROM dukaan_photos WHERE id = d.dukaan_img_id LIMIT 1)) as main_photo
+               FROM dukaan_list d 
+               ${joinClause}
+               ${whereClause} 
+               ORDER BY d.id DESC 
+               LIMIT ? OFFSET ?`, queryParams);
         res.json({
             success: true,
             data: result.rows,

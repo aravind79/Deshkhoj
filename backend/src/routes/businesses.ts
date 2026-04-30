@@ -93,11 +93,12 @@ router.get('/', async (req: Request, res: Response) => {
     let categoryIds: number[] = [];
     if (category || q) {
       const searchTerm = category || q;
+      const searchSpaceless = searchTerm.replace(/\s+/g, '');
       // Split by slash, space, or hyphen to match partial category names (e.g., "Bakery/Cake Shop" matches "Bakery")
       const searchParts = searchTerm.split(/[\/\s-]+/).filter(t => t.length > 2);
       
-      let queryStr = `SELECT id FROM product_category WHERE category_name LIKE ? OR loc_category_name LIKE ?`;
-      let queryParams = [`%${searchTerm}%`, `%${searchTerm}%` ];
+      let queryStr = `SELECT id FROM product_category WHERE category_name LIKE ? OR loc_category_name LIKE ? OR REPLACE(category_name, ' ', '') LIKE ? OR REPLACE(loc_category_name, ' ', '') LIKE ?`;
+      let queryParams = [`%${searchTerm}%`, `%${searchTerm}%`, `%${searchSpaceless}%`, `%${searchSpaceless}%`];
 
       if (searchParts.length > 0) {
         queryStr += ` OR ${searchParts.map(() => `category_name LIKE ? OR loc_category_name LIKE ?`).join(' OR ')}`;
@@ -109,9 +110,29 @@ router.get('/', async (req: Request, res: Response) => {
     }
 
     if (q) {
+      const qSpaceless = q.replace(/\s+/g, '');
+      const qTerm = `%${q}%`;
+      const qSpTerm = `%${qSpaceless}%`;
+
       // Super search: match name, description, address, category names, category IDs, AND individual product names
-      let qCondition = `(d.dukaan_name LIKE ? OR d.dukaan_desc LIKE ? OR d.dukaan_addr LIKE ? OR d.category_1 LIKE ? OR d.category_2 LIKE ? OR d.category_3 LIKE ? OR EXISTS (SELECT 1 FROM dukaan_products dp WHERE dp.shop_id = d.id AND dp.prod_name LIKE ?))`;
-      const qParams = [`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%` ];
+      let qCondition = `(
+        d.dukaan_name LIKE ? OR REPLACE(d.dukaan_name, ' ', '') LIKE ? OR 
+        d.dukaan_desc LIKE ? OR REPLACE(d.dukaan_desc, ' ', '') LIKE ? OR 
+        d.dukaan_addr LIKE ? OR REPLACE(d.dukaan_addr, ' ', '') LIKE ? OR 
+        d.category_1 LIKE ? OR REPLACE(d.category_1, ' ', '') LIKE ? OR 
+        d.category_2 LIKE ? OR REPLACE(d.category_2, ' ', '') LIKE ? OR 
+        d.category_3 LIKE ? OR REPLACE(d.category_3, ' ', '') LIKE ? OR 
+        EXISTS (SELECT 1 FROM dukaan_products dp WHERE dp.shop_id = d.id AND (dp.prod_name LIKE ? OR REPLACE(dp.prod_name, ' ', '') LIKE ?))
+      )`;
+      const qParams = [
+        qTerm, qSpTerm,
+        qTerm, qSpTerm,
+        qTerm, qSpTerm,
+        qTerm, qSpTerm,
+        qTerm, qSpTerm,
+        qTerm, qSpTerm,
+        qTerm, qSpTerm
+      ];
       
       if (categoryIds.length > 0) {
         // Search for each category ID in the comma-separated list
@@ -129,12 +150,26 @@ router.get('/', async (req: Request, res: Response) => {
     }
     if (category) {
       const searchTerm = category.trim();
+      const searchSpaceless = searchTerm.replace(/\s+/g, '');
       const searchParts = searchTerm.split(/[\/\s-]+/).filter(t => t.length > 2);
       
       // Basic conditions for the full term
       const catTerm = `%${searchTerm}%`;
-      let catConditionParts = [`d.category_1 LIKE ?`, `d.category_2 LIKE ?`, `d.category_3 LIKE ?`, `d.dukaan_name LIKE ?`, `d.dukaan_desc LIKE ?`];
-      const catParams = [catTerm, catTerm, catTerm, catTerm, catTerm];
+      const catSpTerm = `%${searchSpaceless}%`;
+      let catConditionParts = [
+        `d.category_1 LIKE ?`, `REPLACE(d.category_1, ' ', '') LIKE ?`,
+        `d.category_2 LIKE ?`, `REPLACE(d.category_2, ' ', '') LIKE ?`,
+        `d.category_3 LIKE ?`, `REPLACE(d.category_3, ' ', '') LIKE ?`,
+        `d.dukaan_name LIKE ?`, `REPLACE(d.dukaan_name, ' ', '') LIKE ?`,
+        `d.dukaan_desc LIKE ?`, `REPLACE(d.dukaan_desc, ' ', '') LIKE ?`
+      ];
+      const catParams = [
+        catTerm, catSpTerm, 
+        catTerm, catSpTerm, 
+        catTerm, catSpTerm, 
+        catTerm, catSpTerm, 
+        catTerm, catSpTerm
+      ];
 
       // Add conditions for each keyword part (e.g., "Bakery" or "Cake")
       searchParts.forEach(part => {
