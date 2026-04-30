@@ -76,6 +76,29 @@ router.get('/', async (req, res) => {
         const conditions = [`(d.dukaan_name IS NOT NULL AND d.dukaan_name != '' AND d.dukaan_name != '.')`];
         const params = [];
 
+        // Enhanced Category/Keyword Lookup: find category IDs for names
+        let categoryIds = [];
+        if (category || q) {
+            const searchTerm = (category || q);
+            const searchSpaceless = searchTerm.replace(/\s+/g, '');
+            const searchParts = searchTerm.split(/[\/\s-]+/).filter(t => t.length > 2);
+            
+            let queryStr = `SELECT id FROM product_category WHERE category_name LIKE ? OR loc_category_name LIKE ? OR REPLACE(category_name, ' ', '') LIKE ? OR REPLACE(loc_category_name, ' ', '') LIKE ?`;
+            let queryParams = [`%${searchTerm}%`, `%${searchTerm}%`, `%${searchSpaceless}%`, `%${searchSpaceless}%`];
+
+            if (searchParts.length > 0) {
+                queryStr += ` OR ${searchParts.map(() => `category_name LIKE ? OR loc_category_name LIKE ?`).join(' OR ')}`;
+                searchParts.forEach(part => queryParams.push(`%${part}%`, `%${part}%`));
+            }
+
+            try {
+                const catLookup = await (0, db_1.query)(queryStr, queryParams);
+                categoryIds = [...new Set(catLookup.rows.map((r) => r.id))];
+            } catch (e) {
+                console.error("Category lookup error:", e);
+            }
+        }
+
         if (q) {
             const qSpaceless = q.replace(/\s+/g, '');
             const qTerm = `%${q}%`;
@@ -101,6 +124,13 @@ router.get('/', async (req, res) => {
                 qTerm, qSpTerm,
                 qTerm, qSpTerm
             ];
+            
+            if (categoryIds.length > 0) {
+                const idConditions = categoryIds.map(() => `FIND_IN_SET(?, REPLACE(d.shop_categories, ' ', ''))`).join(' OR ');
+                qCondition = `(${qCondition} OR ${idConditions})`;
+                categoryIds.forEach(id => qParams.push(id.toString()));
+            }
+
             conditions.push(qCondition);
             params.push(...qParams);
         }
@@ -136,6 +166,14 @@ router.get('/', async (req, res) => {
                 catConditionParts.push(`d.shop_categories LIKE ?`, `d.category_1 LIKE ?`, `d.category_2 LIKE ?`, `d.category_3 LIKE ?`, `d.dukaan_name LIKE ?`, `d.dukaan_desc LIKE ?`);
                 catParams.push(partTerm, partTerm, partTerm, partTerm, partTerm, partTerm);
             });
+
+            if (categoryIds.length > 0) {
+                categoryIds.forEach(id => {
+                    catConditionParts.push(`FIND_IN_SET(?, REPLACE(d.shop_categories, ' ', ''))`);
+                    catParams.push(id.toString());
+                });
+            }
+
             conditions.push(`(${catConditionParts.join(' OR ')})`);
             params.push(...catParams);
         }
