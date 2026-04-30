@@ -105,6 +105,10 @@ export default function Home() {
     router.push(`/search?q=${encodeURIComponent(query)}`);
   };
 
+  const handleCategoryRedirect = (categoryName: string) => {
+    router.push(`/search?category=${encodeURIComponent(categoryName)}`);
+  };
+
   const handleSearch = () => {
     if (searchQuery.trim()) {
       router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
@@ -336,7 +340,7 @@ export default function Home() {
           {POPULAR_CATEGORIES.map((cat, index) => (
             <motion.div
               key={cat.name}
-              onClick={() => handleRedirect(cat.name)}
+              onClick={() => handleCategoryRedirect(cat.name)}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}

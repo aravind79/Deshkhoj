@@ -76,41 +76,7 @@ function SearchResults() {
     setSelectedDistrict("");
   }, [selectedState]);
 
-  // Smart auto-select: match URL query against categories/states (runs once when both are loaded)
-  // Uses a ref guard so it only runs once and does NOT re-trigger duplicate fetches
-  const autoSelectDone = useState(false);
-  useEffect(() => {
-    if (!categories.length || !states.length || !initialQ || autoSelectDone[0]) return;
-    autoSelectDone[1](true); // Mark as done
-    const qLower = initialQ.toLowerCase();
 
-    // 1. Try category match first (higher priority)
-    const catMatch = categories.find(
-      (c) =>
-        c.cat_name &&
-        (
-          c.cat_name.toLowerCase() === qLower ||
-          c.cat_name.toLowerCase().includes(qLower) ||
-          qLower.includes(c.cat_name.toLowerCase())
-        )
-    );
-    if (catMatch) {
-      setSelectedCategory((prev) => prev || catMatch.cat_name);
-      setQ(""); // Clear text search so it becomes a pure category filter
-      return;
-    }
-
-    // 2. Try state match only if no category matched
-    const stateMatch = states.find(
-      (s) =>
-        s.name.toLowerCase() === qLower ||
-        s.name.toLowerCase().includes(qLower) ||
-        qLower.includes(s.name.toLowerCase())
-    );
-    if (stateMatch) {
-      setSelectedState((prev) => prev || String(stateMatch.id));
-    }
-  }, [categories, states]);
 
   // Live Search Effect (Debounced)
   useEffect(() => {
