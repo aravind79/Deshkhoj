@@ -167,7 +167,8 @@ router.get('/', async (req: Request, res: Response) => {
         `COALESCE(d.category_2, '') LIKE ?`, `REPLACE(COALESCE(d.category_2, ''), ' ', '') LIKE ?`,
         `COALESCE(d.category_3, '') LIKE ?`, `REPLACE(COALESCE(d.category_3, ''), ' ', '') LIKE ?`,
         `COALESCE(d.dukaan_name, '') LIKE ?`, `REPLACE(COALESCE(d.dukaan_name, ''), ' ', '') LIKE ?`,
-        `COALESCE(d.dukaan_desc, '') LIKE ?`, `REPLACE(COALESCE(d.dukaan_desc, ''), ' ', '') LIKE ?`
+        `COALESCE(d.dukaan_desc, '') LIKE ?`, `REPLACE(COALESCE(d.dukaan_desc, ''), ' ', '') LIKE ?`,
+        `EXISTS (SELECT 1 FROM dukaan_products dp WHERE dp.shop_id = d.id AND (COALESCE(dp.prod_name, '') LIKE ? OR REPLACE(COALESCE(dp.prod_name, ''), ' ', '') LIKE ?))`
       ];
       const catParams = [
         catTerm, catSpTerm, 
@@ -175,14 +176,15 @@ router.get('/', async (req: Request, res: Response) => {
         catTerm, catSpTerm, 
         catTerm, catSpTerm, 
         catTerm, catSpTerm, 
+        catTerm, catSpTerm,
         catTerm, catSpTerm
       ];
 
       // Add conditions for each keyword part (e.g., "Bakery" or "Cake")
       searchParts.forEach(part => {
         const partTerm = `%${part}%`;
-        catConditionParts.push(`COALESCE(d.shop_categories, '') LIKE ?`, `COALESCE(d.category_1, '') LIKE ?`, `COALESCE(d.category_2, '') LIKE ?`, `COALESCE(d.category_3, '') LIKE ?`, `COALESCE(d.dukaan_name, '') LIKE ?`, `COALESCE(d.dukaan_desc, '') LIKE ?`);
-        catParams.push(partTerm, partTerm, partTerm, partTerm, partTerm, partTerm);
+        catConditionParts.push(`COALESCE(d.shop_categories, '') LIKE ?`, `COALESCE(d.category_1, '') LIKE ?`, `COALESCE(d.category_2, '') LIKE ?`, `COALESCE(d.category_3, '') LIKE ?`, `COALESCE(d.dukaan_name, '') LIKE ?`, `COALESCE(d.dukaan_desc, '') LIKE ?`, `EXISTS (SELECT 1 FROM dukaan_products dp WHERE dp.shop_id = d.id AND COALESCE(dp.prod_name, '') LIKE ?)`);
+        catParams.push(partTerm, partTerm, partTerm, partTerm, partTerm, partTerm, partTerm);
       });
 
       if (categoryIds.length > 0) {
