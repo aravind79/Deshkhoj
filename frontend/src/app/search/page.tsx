@@ -16,6 +16,12 @@ function SearchResults() {
 
   const [q, setQ] = useState(initialQ);
   const [loc, setLoc] = useState(initialLoc);
+
+  // Sync state with URL params on navigation/hydration
+  useEffect(() => {
+    setQ(initialQ);
+    setLoc(initialLoc);
+  }, [initialQ, initialLoc]);
   const [results, setResults] = useState<Business[]>([]);
   const [meta, setMeta] = useState({ total: 0, page: 1, totalPages: 1 });
   const [loading, setLoading] = useState(true);
@@ -54,11 +60,10 @@ function SearchResults() {
     return () => clearTimeout(timer);
   }, [q, loc]);
 
-  // Fire once on mount for category/product pages arriving via URL
+  // Fire once on mount and when category changes
   useEffect(() => {
     fetchResults({ page: 1 });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [initialCat, fetchResults]);
 
   const isFiltered = q.length > 0 || loc.length > 0 || !!initialCat;
   const headingText = initialCat

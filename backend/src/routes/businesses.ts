@@ -120,14 +120,14 @@ router.get('/', async (req: Request, res: Response) => {
 
       // Super search: match name, description, address, category names, AND individual product names
       let qCondition = `(
-        d.dukaan_name LIKE ? OR REPLACE(d.dukaan_name, ' ', '') LIKE ? OR 
-        d.dukaan_desc LIKE ? OR REPLACE(d.dukaan_desc, ' ', '') LIKE ? OR 
-        d.dukaan_addr LIKE ? OR REPLACE(d.dukaan_addr, ' ', '') LIKE ? OR 
-        d.shop_categories LIKE ? OR REPLACE(d.shop_categories, ' ', '') LIKE ? OR 
-        d.category_1 LIKE ? OR REPLACE(d.category_1, ' ', '') LIKE ? OR 
-        d.category_2 LIKE ? OR REPLACE(d.category_2, ' ', '') LIKE ? OR 
-        d.category_3 LIKE ? OR REPLACE(d.category_3, ' ', '') LIKE ? OR 
-        EXISTS (SELECT 1 FROM dukaan_products dp WHERE dp.shop_id = d.id AND (dp.prod_name LIKE ? OR REPLACE(dp.prod_name, ' ', '') LIKE ?))
+        COALESCE(d.dukaan_name, '') LIKE ? OR REPLACE(COALESCE(d.dukaan_name, ''), ' ', '') LIKE ? OR 
+        COALESCE(d.dukaan_desc, '') LIKE ? OR REPLACE(COALESCE(d.dukaan_desc, ''), ' ', '') LIKE ? OR 
+        COALESCE(d.dukaan_addr, '') LIKE ? OR REPLACE(COALESCE(d.dukaan_addr, ''), ' ', '') LIKE ? OR 
+        COALESCE(d.shop_categories, '') LIKE ? OR REPLACE(COALESCE(d.shop_categories, ''), ' ', '') LIKE ? OR 
+        COALESCE(d.category_1, '') LIKE ? OR REPLACE(COALESCE(d.category_1, ''), ' ', '') LIKE ? OR 
+        COALESCE(d.category_2, '') LIKE ? OR REPLACE(COALESCE(d.category_2, ''), ' ', '') LIKE ? OR 
+        COALESCE(d.category_3, '') LIKE ? OR REPLACE(COALESCE(d.category_3, ''), ' ', '') LIKE ? OR 
+        EXISTS (SELECT 1 FROM dukaan_products dp WHERE dp.shop_id = d.id AND (COALESCE(dp.prod_name, '') LIKE ? OR REPLACE(COALESCE(dp.prod_name, ''), ' ', '') LIKE ?))
       )`;
       const qParams = [
         qTerm, qSpTerm,
@@ -141,7 +141,7 @@ router.get('/', async (req: Request, res: Response) => {
       ];
       
       if (categoryIds.length > 0) {
-        const idConditions = categoryIds.map(() => `FIND_IN_SET(?, REPLACE(d.shop_categories, ' ', ''))`).join(' OR ');
+        const idConditions = categoryIds.map(() => `FIND_IN_SET(?, REPLACE(COALESCE(d.shop_categories, ''), ' ', ''))`).join(' OR ');
         qCondition = `(${qCondition} OR ${idConditions})`;
         categoryIds.forEach(id => qParams.push(id.toString()));
       }
@@ -162,12 +162,12 @@ router.get('/', async (req: Request, res: Response) => {
       const catTerm = `%${searchTerm}%`;
       const catSpTerm = `%${searchSpaceless}%`;
       let catConditionParts = [
-        `d.shop_categories LIKE ?`, `REPLACE(d.shop_categories, ' ', '') LIKE ?`,
-        `d.category_1 LIKE ?`, `REPLACE(d.category_1, ' ', '') LIKE ?`,
-        `d.category_2 LIKE ?`, `REPLACE(d.category_2, ' ', '') LIKE ?`,
-        `d.category_3 LIKE ?`, `REPLACE(d.category_3, ' ', '') LIKE ?`,
-        `d.dukaan_name LIKE ?`, `REPLACE(d.dukaan_name, ' ', '') LIKE ?`,
-        `d.dukaan_desc LIKE ?`, `REPLACE(d.dukaan_desc, ' ', '') LIKE ?`
+        `COALESCE(d.shop_categories, '') LIKE ?`, `REPLACE(COALESCE(d.shop_categories, ''), ' ', '') LIKE ?`,
+        `COALESCE(d.category_1, '') LIKE ?`, `REPLACE(COALESCE(d.category_1, ''), ' ', '') LIKE ?`,
+        `COALESCE(d.category_2, '') LIKE ?`, `REPLACE(COALESCE(d.category_2, ''), ' ', '') LIKE ?`,
+        `COALESCE(d.category_3, '') LIKE ?`, `REPLACE(COALESCE(d.category_3, ''), ' ', '') LIKE ?`,
+        `COALESCE(d.dukaan_name, '') LIKE ?`, `REPLACE(COALESCE(d.dukaan_name, ''), ' ', '') LIKE ?`,
+        `COALESCE(d.dukaan_desc, '') LIKE ?`, `REPLACE(COALESCE(d.dukaan_desc, ''), ' ', '') LIKE ?`
       ];
       const catParams = [
         catTerm, catSpTerm, 
@@ -181,13 +181,13 @@ router.get('/', async (req: Request, res: Response) => {
       // Add conditions for each keyword part (e.g., "Bakery" or "Cake")
       searchParts.forEach(part => {
         const partTerm = `%${part}%`;
-        catConditionParts.push(`d.shop_categories LIKE ?`, `d.category_1 LIKE ?`, `d.category_2 LIKE ?`, `d.category_3 LIKE ?`, `d.dukaan_name LIKE ?`, `d.dukaan_desc LIKE ?`);
+        catConditionParts.push(`COALESCE(d.shop_categories, '') LIKE ?`, `COALESCE(d.category_1, '') LIKE ?`, `COALESCE(d.category_2, '') LIKE ?`, `COALESCE(d.category_3, '') LIKE ?`, `COALESCE(d.dukaan_name, '') LIKE ?`, `COALESCE(d.dukaan_desc, '') LIKE ?`);
         catParams.push(partTerm, partTerm, partTerm, partTerm, partTerm, partTerm);
       });
 
       if (categoryIds.length > 0) {
         categoryIds.forEach(id => {
-          catConditionParts.push(`FIND_IN_SET(?, REPLACE(d.shop_categories, ' ', ''))`);
+          catConditionParts.push(`FIND_IN_SET(?, REPLACE(COALESCE(d.shop_categories, ''), ' ', ''))`);
           catParams.push(id.toString());
         });
       }
