@@ -25,6 +25,7 @@ function SearchResults() {
   const [results, setResults] = useState<Business[]>([]);
   const [meta, setMeta] = useState({ total: 0, page: 1, totalPages: 1 });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [inquiryShop, setInquiryShop] = useState<Business | null>(null);
   const resultsRef = useRef<HTMLHeadingElement>(null);
@@ -41,7 +42,10 @@ function SearchResults() {
       });
       setResults(res.data);
       setMeta(res.meta);
-    } catch {
+      setError(null);
+    } catch (err: any) {
+      console.error("Search API Error:", err);
+      setError(err?.response?.data?.message || err.message || "Failed to fetch results");
       setResults([]);
     } finally {
       setLoading(false);
@@ -202,7 +206,6 @@ function SearchResults() {
               </div>
             ))}
 
-            {/* Pagination */}
             {meta.totalPages > 1 && (
               <div className="flex items-center justify-center gap-2 mt-4">
                 <button
@@ -223,6 +226,12 @@ function SearchResults() {
               </div>
             )}
           </>
+        ) : error ? (
+          <div className="flex min-h-[300px] flex-col items-center justify-center rounded-xl border border-dashed border-red-500/50 bg-red-50 p-8 text-center">
+            <h3 className="text-lg font-bold text-red-600">Backend API Error</h3>
+            <p className="mt-2 text-red-500 max-w-sm text-sm">{error}</p>
+            <p className="mt-4 text-xs font-bold text-red-400">If you see this, the SQL query likely crashed on the server.</p>
+          </div>
         ) : (
           <div className="flex min-h-[300px] flex-col items-center justify-center rounded-xl border border-dashed border-card-border bg-card-bg/50 p-8 text-center">
             <MapPin className="h-12 w-12 text-foreground/20 mb-4" />
