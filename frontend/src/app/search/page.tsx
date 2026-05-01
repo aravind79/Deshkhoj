@@ -51,19 +51,14 @@ function SearchResults() {
     }
   }, [q, loc, page, initialCat]);
 
-  // Initial fetch + whenever q or loc changes (debounced)
+  // Single unified data fetch effect (debounced for q/loc)
   useEffect(() => {
     const timer = setTimeout(() => {
-      setPage(1);
+      setPage(1); // Reset page on any filter change
       fetchResults({ q, loc, page: 1 });
     }, 400);
     return () => clearTimeout(timer);
-  }, [q, loc]);
-
-  // Fire once on mount and when category changes
-  useEffect(() => {
-    fetchResults({ page: 1 });
-  }, [initialCat, fetchResults]);
+  }, [q, loc, initialCat]); // ONLY depend on the primitives, NOT fetchResults
 
   const isFiltered = q.length > 0 || loc.length > 0 || !!initialCat;
   const headingText = initialCat
