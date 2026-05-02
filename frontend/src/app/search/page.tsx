@@ -10,33 +10,41 @@ function SearchResults() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // Read ALL params live from searchParams — never store in useState
-  // This way there are no stale closures when navigating between categories
-  const q_url = searchParams.get("q") || "";
-  const loc_url = searchParams.get("loc") || "";
-  const cat_url = searchParams.get("category") || "";
+  // Read URL params — these are the source of truth for navigation-driven searches
+  const q_url    = searchParams.get("q")        || "";
+  const loc_url  = searchParams.get("loc")      || "";
+  const cat_url  = searchParams.get("category") || "";
 
-  const [q, setQ] = useState(q_url);
+  // Local input state — synced from URL on navigation, driven by user typing
+  const [q,   setQ]   = useState(q_url);
   const [loc, setLoc] = useState(loc_url);
-  const [results, setResults] = useState<Business[]>([]);
-  const [meta, setMeta] = useState({ total: 0, page: 1, totalPages: 1 });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
+
+  const [results,     setResults]     = useState<Business[]>([]);
+  const [meta,        setMeta]        = useState({ total: 0, page: 1, totalPages: 1 });
+  const [loading,     setLoading]     = useState(true);
+  const [error,       setError]       = useState<string | null>(null);
+  const [page,        setPage]        = useState(1);
   const [inquiryShop, setInquiryShop] = useState<Business | null>(null);
   const resultsRef = useRef<HTMLHeadingElement>(null);
 
-  // Single fetch function — reads live from searchParams, no stale closures
+  // Sync local inputs whenever URL changes (e.g. clicking a category from home page)
+  useEffect(() => {
+    setQ(q_url);
+    setLoc(loc_url);
+    // Don't sync cat_url into local state — it only lives in the URL
+  }, [q_url, loc_url, cat_url]);
+
+  // ─── Core fetch ───────────────────────────────────────────────────────────
   const doFetch = async (opts: { q: string; loc: string; category: string; page: number }) => {
     setLoading(true);
     setError(null);
     try {
       const res = await api.businesses.search({
-        q: opts.q,
-        loc: opts.loc,
+        q:        opts.q,
+        loc:      opts.loc,
         category: opts.category,
-        page: opts.page,
-        limit: 12,
+        page:     opts.page,
+        limit:    12,
       });
       setResults(res.data);
       setMeta(res.meta);
@@ -52,46 +60,61 @@ function SearchResults() {
     }
   };
 
-  // Update URL when user types — this clears stale ?category= and keeps URL in sync.
-  // The KeyedSearchResults wrapper remounts SearchResults on every URL change.
-  const updateUrl = (newQ: string, newLoc: string) => {
-    const params = new URLSearchParams();
-    if (newQ.trim()) params.set("q", newQ.trim());
-    if (newLoc.trim()) params.set("loc", newLoc.trim());
-    // Note: intentionally do NOT set category — typing always clears the old category filter
-    const qs = params.toString();
-    router.replace(qs ? `/search?${qs}` : "/search", { scroll: false });
-  };
-
-  // Re-fetch whenever the URL parameters change (debounced)
+  // ─── Main fetch effect (debounced) ────────────────────────────────────────
+  // KEY RULE: if the user has typed something in `q`, we send only `q` (no category).
+  // This prevents the AND-condition conflict:
+  //   category="Cake Shop" AND q="Vermi compost" → 0 results
+  // When q is empty, we use the URL category (clicked from home page).
   useEffect(() => {
     const timer = setTimeout(() => {
       setPage(1);
-      doFetch({ q, loc, category: cat_url, page: 1 });
+      const effectiveCategory = q.trim() ? "" : cat_url;
+      doFetch({ q: q.trim(), loc: loc.trim(), category: effectiveCategory, page: 1 });
     }, 300);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, loc, cat_url]);
 
-  // Debounce URL updates when user types (separate timer so fetch and URL update stay in sync)
-  const urlTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const handleQChange = (val: string) => {
-    setQ(val);
-    if (urlTimerRef.current) clearTimeout(urlTimerRef.current);
-    urlTimerRef.current = setTimeout(() => updateUrl(val, loc), 400);
-  };
-  const handleLocChange = (val: string) => {
-    setLoc(val);
-    if (urlTimerRef.current) clearTimeout(urlTimerRef.current);
-    urlTimerRef.current = setTimeout(() => updateUrl(q, val), 400);
+  // ─── URL sync on typing ───────────────────────────────────────────────────
+  // When the user types, update the URL so it stays shareable/refresh-safe.
+  // Intentionally clears ?category= so the old filter doesn't persist.
+  const urlTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const syncUrl = (newQ: string, newLoc: string) => {
+    if (urlTimer.current) clearTimeout(urlTimer.current);
+    urlTimer.current = setTimeout(() => {
+      const p = new URLSearchParams();
+      if (newQ.trim())   p.set("q",   newQ.trim());
+      if (newLoc.trim()) p.set("loc", newLoc.trim());
+      const qs = p.toString();
+      router.replace(qs ? `/search?${qs}` : "/search", { scroll: false });
+    }, 500);
   };
 
-  const isFiltered = q.length > 0 || loc.length > 0 || !!cat_url;
-  const headingText = cat_url
+  const handleQChange = (val: string) => {
+    setQ(val);
+    syncUrl(val, loc);
+  };
+
+  const handleLocChange = (val: string) => {
+    setLoc(val);
+    syncUrl(q, val);
+  };
+
+  // ─── Display helpers ──────────────────────────────────────────────────────
+  const isFiltered  = q.length > 0 || loc.length > 0 || !!cat_url;
+  const headingText = (cat_url && !q.trim())
     ? `Results for ${cat_url}`
-    : q
+    : q.trim()
     ? `Results for "${q}"`
     : "Explore Businesses";
+
+  // Pagination helper — respects whichever filter is active
+  const goPage = (p: number) => {
+    setPage(p);
+    const effectiveCategory = q.trim() ? "" : cat_url;
+    doFetch({ q: q.trim(), loc: loc.trim(), category: effectiveCategory, page: p });
+  };
 
   return (
     <div className="container mx-auto px-4 py-8 md:px-6">
@@ -132,7 +155,7 @@ function SearchResults() {
         )}
       </div>
 
-      {/* Results — full width, no sidebar */}
+      {/* Results */}
       <div className="flex flex-col gap-4">
         {loading ? (
           Array.from({ length: 4 }).map((_, i) => (
@@ -228,11 +251,12 @@ function SearchResults() {
               </div>
             ))}
 
+            {/* Pagination */}
             {meta.totalPages > 1 && (
               <div className="flex items-center justify-center gap-2 mt-4">
                 <button
                   disabled={page === 1}
-                  onClick={() => { const p = page - 1; setPage(p); doFetch({ q, loc, category: cat_url, page: p }); }}
+                  onClick={() => goPage(page - 1)}
                   className="rounded-md border border-card-border px-4 py-2 text-sm font-medium disabled:opacity-40 hover:bg-card-border/50 transition"
                 >
                   ← Prev
@@ -240,7 +264,7 @@ function SearchResults() {
                 <span className="text-sm text-foreground/60">Page {meta.page} of {meta.totalPages}</span>
                 <button
                   disabled={page >= meta.totalPages}
-                  onClick={() => { const p = page + 1; setPage(p); doFetch({ q, loc, category: cat_url, page: p }); }}
+                  onClick={() => goPage(page + 1)}
                   className="rounded-md border border-card-border px-4 py-2 text-sm font-medium disabled:opacity-40 hover:bg-card-border/50 transition"
                 >
                   Next →
@@ -252,7 +276,7 @@ function SearchResults() {
           <div className="flex min-h-[300px] flex-col items-center justify-center rounded-xl border border-dashed border-red-500/50 bg-red-50 p-8 text-center">
             <h3 className="text-lg font-bold text-red-600">Backend API Error</h3>
             <p className="mt-2 text-red-500 max-w-sm text-sm">{error}</p>
-            <p className="mt-4 text-xs font-bold text-red-400">If you see this, the SQL query likely crashed on the server.</p>
+            <p className="mt-4 text-xs font-bold text-red-400">The SQL query likely crashed on the server. Check Hostinger logs.</p>
           </div>
         ) : (
           <div className="flex min-h-[300px] flex-col items-center justify-center rounded-xl border border-dashed border-card-border bg-card-bg/50 p-8 text-center">
@@ -273,18 +297,10 @@ function SearchResults() {
   );
 }
 
-// Inner keyed component: forces a full remount when URL search string changes
-function KeyedSearchResults() {
-  const searchParams = useSearchParams();
-  // Build a stable key from all URL params — component remounts on every unique URL
-  const key = searchParams.toString();
-  return <SearchResults key={key} />;
-}
-
 export default function SearchPage() {
   return (
     <Suspense fallback={<div className="flex min-h-[60vh] items-center justify-center"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" /></div>}>
-      <KeyedSearchResults />
+      <SearchResults />
     </Suspense>
   );
 }
