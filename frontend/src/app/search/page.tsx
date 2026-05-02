@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
-import { Suspense, useEffect, useState, useCallback, useRef } from "react";
+import { Suspense, useEffect, useState, useRef } from "react";
 import { MapPin, Star, Phone, Search, CheckCircle2 } from "lucide-react";
 import { api, API_BASE, type Business } from "@/lib/api";
 import InquiryModal from "@/components/InquiryModal";
@@ -10,18 +10,14 @@ function SearchResults() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const initialQ = searchParams.get("q") || "";
-  const initialLoc = searchParams.get("loc") || "";
-  const initialCat = searchParams.get("category") || "";
+  // Read ALL params live from searchParams — never store in useState
+  // This way there are no stale closures when navigating between categories
+  const q_url = searchParams.get("q") || "";
+  const loc_url = searchParams.get("loc") || "";
+  const cat_url = searchParams.get("category") || "";
 
-  const [q, setQ] = useState(initialQ);
-  const [loc, setLoc] = useState(initialLoc);
-
-  // Sync state with URL params on navigation/hydration
-  useEffect(() => {
-    setQ(initialQ);
-    setLoc(initialLoc);
-  }, [initialQ, initialLoc]);
+  const [q, setQ] = useState(q_url);
+  const [loc, setLoc] = useState(loc_url);
   const [results, setResults] = useState<Business[]>([]);
   const [meta, setMeta] = useState({ total: 0, page: 1, totalPages: 1 });
   const [loading, setLoading] = useState(true);
@@ -30,19 +26,20 @@ function SearchResults() {
   const [inquiryShop, setInquiryShop] = useState<Business | null>(null);
   const resultsRef = useRef<HTMLHeadingElement>(null);
 
-  const fetchResults = useCallback(async (overrides?: { q?: string; loc?: string; page?: number }) => {
+  // Single fetch function — reads live from searchParams, no stale closures
+  const doFetch = async (opts: { q: string; loc: string; category: string; page: number }) => {
     setLoading(true);
+    setError(null);
     try {
       const res = await api.businesses.search({
-        q: overrides?.q ?? q,
-        loc: overrides?.loc ?? loc,
-        category: initialCat, // pass category from URL param directly
-        page: overrides?.page ?? page,
+        q: opts.q,
+        loc: opts.loc,
+        category: opts.category,
+        page: opts.page,
         limit: 12,
       });
       setResults(res.data);
       setMeta(res.meta);
-      setError(null);
     } catch (err: any) {
       console.error("Search API Error:", err);
       setError(err?.response?.data?.message || err.message || "Failed to fetch results");
@@ -53,20 +50,22 @@ function SearchResults() {
         resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 100);
     }
-  }, [q, loc, page, initialCat]);
+  };
 
-  // Single unified data fetch effect (debounced for q/loc)
+  // Re-fetch whenever the URL parameters change (category, q, loc)
+  // Using a debounce for typing in the local inputs
   useEffect(() => {
     const timer = setTimeout(() => {
-      setPage(1); // Reset page on any filter change
-      fetchResults({ q, loc, page: 1 });
-    }, 400);
+      setPage(1);
+      doFetch({ q, loc, category: cat_url, page: 1 });
+    }, 300);
     return () => clearTimeout(timer);
-  }, [q, loc, initialCat]); // ONLY depend on the primitives, NOT fetchResults
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q, loc, cat_url]);
 
-  const isFiltered = q.length > 0 || loc.length > 0 || !!initialCat;
-  const headingText = initialCat
-    ? `Results for ${initialCat}`
+  const isFiltered = q.length > 0 || loc.length > 0 || !!cat_url;
+  const headingText = cat_url
+    ? `Results for ${cat_url}`
     : q
     ? `Results for "${q}"`
     : "Explore Businesses";
@@ -210,7 +209,7 @@ function SearchResults() {
               <div className="flex items-center justify-center gap-2 mt-4">
                 <button
                   disabled={page === 1}
-                  onClick={() => { setPage(p => p - 1); fetchResults({ page: page - 1 }); }}
+                  onClick={() => { const p = page - 1; setPage(p); doFetch({ q, loc, category: cat_url, page: p }); }}
                   className="rounded-md border border-card-border px-4 py-2 text-sm font-medium disabled:opacity-40 hover:bg-card-border/50 transition"
                 >
                   ← Prev
@@ -218,7 +217,7 @@ function SearchResults() {
                 <span className="text-sm text-foreground/60">Page {meta.page} of {meta.totalPages}</span>
                 <button
                   disabled={page >= meta.totalPages}
-                  onClick={() => { setPage(p => p + 1); fetchResults({ page: page + 1 }); }}
+                  onClick={() => { const p = page + 1; setPage(p); doFetch({ q, loc, category: cat_url, page: p }); }}
                   className="rounded-md border border-card-border px-4 py-2 text-sm font-medium disabled:opacity-40 hover:bg-card-border/50 transition"
                 >
                   Next →
@@ -251,10 +250,18 @@ function SearchResults() {
   );
 }
 
+// Inner keyed component: forces a full remount when URL search string changes
+function KeyedSearchResults() {
+  const searchParams = useSearchParams();
+  // Build a stable key from all URL params — component remounts on every unique URL
+  const key = searchParams.toString();
+  return <SearchResults key={key} />;
+}
+
 export default function SearchPage() {
   return (
     <Suspense fallback={<div className="flex min-h-[60vh] items-center justify-center"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" /></div>}>
-      <SearchResults />
+      <KeyedSearchResults />
     </Suspense>
   );
 }
