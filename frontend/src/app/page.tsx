@@ -8,25 +8,25 @@ import { ArrowRight, Search, ArrowRight as SearchArrow } from "lucide-react";
 import { api } from "@/lib/api";
 
 const POPULAR_CATEGORIES = [
-  { name: "Cake Shop", hindi: "प्रसिद्ध उत्पाद", img: "/illustrations/cat_cake_shop.png" },
-  { name: "Parlour", hindi: "प्रसिद्ध उत्पाद", img: "/illustrations/cat_parlour.png" },
-  { name: "Tailoring", hindi: "प्रसिद्ध उत्पाद", img: "/illustrations/cat_tailoring.png" },
-  { name: "Decorator", hindi: "प्रसिद्ध उत्पाद", img: "/illustrations/cat_decorator.png" },
-  { name: "Furniture", hindi: "प्रसिद्ध उत्पाद", img: "/illustrations/cat_furniture.png" },
-  { name: "Clothes", hindi: "प्रसिद्ध उत्पाद", img: "/illustrations/cat_clothes.png" },
-  { name: "Stationary", hindi: "प्रसिद्ध उत्पाद", img: "/illustrations/cat_stationary.png" },
-  { name: "Bangles", hindi: "प्रसिद्ध उत्पाद", img: "/illustrations/cat_bangles.png" },
+  { name: "Cake Shop",   search: "Bakery/Cake Shop",        img: "/illustrations/cat_cake_shop.png" },
+  { name: "Parlour",     search: "Beauty Parlour",           img: "/illustrations/cat_parlour.png" },
+  { name: "Tailoring",   search: "Tailoring",                img: "/illustrations/cat_tailoring.png" },
+  { name: "Decorator",   search: "Marriage Services",        img: "/illustrations/cat_decorator.png" },
+  { name: "Furniture",   search: "Furniture Store",          img: "/illustrations/cat_furniture.png" },
+  { name: "Clothes",     search: "Garments (Ladies)",        img: "/illustrations/cat_clothes.png" },
+  { name: "Stationary",  search: "Stationery",               img: "/illustrations/cat_stationary.png" },
+  { name: "Bangles",     search: "Jewellery (Imitation)",    img: "/illustrations/cat_bangles.png" },
 ];
 
 const POPULAR_PRODUCTS = [
-  { name: "Vermi compost", img: "/illustrations/prod_vermi.png" },
-  { name: "Chocolate Cake", img: "/illustrations/prod_chocolate_cake.png" },
-  { name: "Udid Papad", img: "/illustrations/prod_papad.png" },
-  { name: "Ladies Kurti", img: "/illustrations/prod_kurti.png" },
-  { name: "Soya Coffee", img: "/illustrations/prod_coffee.png" },
-  { name: "Flex Seeds", img: "/illustrations/prod_flax.png" },
-  { name: "Mehendi", img: "/illustrations/prod_mehendi.png" },
-  { name: "HandBags", img: "/illustrations/prod_handbags.png" },
+  { name: "Vermi compost",  search: "Vermicompost",          img: "/illustrations/prod_vermi.png" },
+  { name: "Chocolate Cake", search: "Bakery/Cake Shop",      img: "/illustrations/prod_chocolate_cake.png" },
+  { name: "Udid Papad",     search: "Papad",                 img: "/illustrations/prod_papad.png" },
+  { name: "Ladies Kurti",   search: "Garments (Ladies)",     img: "/illustrations/prod_kurti.png" },
+  { name: "Soya Coffee",    search: "Tea Coffee Beverages",  img: "/illustrations/prod_coffee.png" },
+  { name: "Flex Seeds",     search: "Flax Seed",             img: "/illustrations/prod_flax.png" },
+  { name: "Mehendi",        search: "Mehandi Designers",     img: "/illustrations/prod_mehendi.png" },
+  { name: "HandBags",       search: "Garments (Ladies)",     img: "/illustrations/prod_handbags.png" },
 ];
 
 const BUSINESS_TYPES = [
@@ -340,7 +340,7 @@ export default function Home() {
           {POPULAR_CATEGORIES.map((cat, index) => (
             <motion.div
               key={cat.name}
-              onClick={() => handleCategoryRedirect(cat.name)}
+              onClick={() => handleCategoryRedirect(cat.search)}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -379,7 +379,7 @@ export default function Home() {
           {POPULAR_PRODUCTS.map((prod, index) => (
             <motion.div
               key={prod.name}
-              onClick={() => handleRedirect(prod.name)}
+              onClick={() => handleRedirect(prod.search)}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
