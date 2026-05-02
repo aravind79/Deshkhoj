@@ -52,8 +52,18 @@ function SearchResults() {
     }
   };
 
-  // Re-fetch whenever the URL parameters change (category, q, loc)
-  // Using a debounce for typing in the local inputs
+  // Update URL when user types — this clears stale ?category= and keeps URL in sync.
+  // The KeyedSearchResults wrapper remounts SearchResults on every URL change.
+  const updateUrl = (newQ: string, newLoc: string) => {
+    const params = new URLSearchParams();
+    if (newQ.trim()) params.set("q", newQ.trim());
+    if (newLoc.trim()) params.set("loc", newLoc.trim());
+    // Note: intentionally do NOT set category — typing always clears the old category filter
+    const qs = params.toString();
+    router.replace(qs ? `/search?${qs}` : "/search", { scroll: false });
+  };
+
+  // Re-fetch whenever the URL parameters change (debounced)
   useEffect(() => {
     const timer = setTimeout(() => {
       setPage(1);
@@ -62,6 +72,19 @@ function SearchResults() {
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, loc, cat_url]);
+
+  // Debounce URL updates when user types (separate timer so fetch and URL update stay in sync)
+  const urlTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleQChange = (val: string) => {
+    setQ(val);
+    if (urlTimerRef.current) clearTimeout(urlTimerRef.current);
+    urlTimerRef.current = setTimeout(() => updateUrl(val, loc), 400);
+  };
+  const handleLocChange = (val: string) => {
+    setLoc(val);
+    if (urlTimerRef.current) clearTimeout(urlTimerRef.current);
+    urlTimerRef.current = setTimeout(() => updateUrl(q, val), 400);
+  };
 
   const isFiltered = q.length > 0 || loc.length > 0 || !!cat_url;
   const headingText = cat_url
@@ -79,7 +102,7 @@ function SearchResults() {
           <MapPin className="h-4 w-4 text-primary flex-shrink-0" />
           <input
             value={loc}
-            onChange={(e) => setLoc(e.target.value)}
+            onChange={(e) => handleLocChange(e.target.value)}
             type="text"
             placeholder="Enter location..."
             className="w-full bg-transparent text-sm outline-none placeholder:text-foreground/40"
@@ -89,7 +112,7 @@ function SearchResults() {
           <Search className="h-4 w-4 text-foreground/40 flex-shrink-0" />
           <input
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onChange={(e) => handleQChange(e.target.value)}
             type="text"
             placeholder="What are you looking for?"
             className="w-full bg-transparent text-sm outline-none placeholder:text-foreground/40"
