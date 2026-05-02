@@ -19,6 +19,10 @@ function SearchResults() {
   const [q,   setQ]   = useState(q_url);
   const [loc, setLoc] = useState(loc_url);
   const [cat, setCat] = useState(cat_url);
+  const [stateId, setStateId] = useState(searchParams.get("state_id") || "");
+
+  const [dbCategories, setDbCategories] = useState<{id: number; cat_name: string}[]>([]);
+  const [dbStates, setDbStates] = useState<{id: number; state_name: string}[]>([]);
 
   const [results,     setResults]     = useState<Business[]>([]);
   const [meta,        setMeta]        = useState({ total: 0, page: 1, totalPages: 1 });
@@ -33,10 +37,22 @@ function SearchResults() {
     setQ(q_url);
     setLoc(loc_url);
     setCat(cat_url);
-  }, [q_url, loc_url, cat_url]);
+    setStateId(searchParams.get("state_id") || "");
+  }, [q_url, loc_url, cat_url, searchParams]);
+
+  // Load Categories & States on mount
+  useEffect(() => {
+    api.categories.list().then(res => {
+      if (res.success) setDbCategories(res.data);
+    }).catch(console.error);
+
+    api.locations.states().then(res => {
+      if (res.success) setDbStates(res.data);
+    }).catch(console.error);
+  }, []);
 
   // ─── Core fetch ───────────────────────────────────────────────────────────
-  const doFetch = async (opts: { q: string; loc: string; category: string; page: number }) => {
+  const doFetch = async (opts: { q: string; loc: string; category: string; state_id: string; page: number }) => {
     setLoading(true);
     setError(null);
     try {
@@ -44,6 +60,7 @@ function SearchResults() {
         q:        opts.q,
         loc:      opts.loc,
         category: opts.category,
+        state_id: opts.state_id ? Number(opts.state_id) : undefined,
         page:     opts.page,
         limit:    12,
       });
@@ -65,23 +82,24 @@ function SearchResults() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setPage(1);
-      doFetch({ q: q.trim(), loc: loc.trim(), category: cat, page: 1 });
+      doFetch({ q: q.trim(), loc: loc.trim(), category: cat, state_id: stateId, page: 1 });
     }, 300);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, loc, cat]);
+  }, [q, loc, cat, stateId]);
 
   // ─── URL sync on typing ───────────────────────────────────────────────────
   // When the user types, update the URL so it stays shareable/refresh-safe.
   const urlTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const syncUrl = (newQ: string, newLoc: string, newCat: string) => {
+  const syncUrl = (newQ: string, newLoc: string, newCat: string, newState: string) => {
     if (urlTimer.current) clearTimeout(urlTimer.current);
     urlTimer.current = setTimeout(() => {
       const p = new URLSearchParams();
       if (newQ.trim())   p.set("q",   newQ.trim());
       if (newLoc.trim()) p.set("loc", newLoc.trim());
       if (newCat)        p.set("category", newCat);
+      if (newState)      p.set("state_id", newState);
       const qs = p.toString();
       router.replace(qs ? `/search?${qs}` : "/search", { scroll: false });
     }, 500);
@@ -89,17 +107,22 @@ function SearchResults() {
 
   const handleQChange = (val: string) => {
     setQ(val);
-    syncUrl(val, loc, cat);
+    syncUrl(val, loc, cat, stateId);
   };
 
   const handleLocChange = (val: string) => {
     setLoc(val);
-    syncUrl(q, val, cat);
+    syncUrl(q, val, cat, stateId);
   };
 
   const handleCatChange = (val: string) => {
     setCat(val);
-    syncUrl(q, loc, val);
+    syncUrl(q, loc, val, stateId);
+  };
+
+  const handleStateChange = (val: string) => {
+    setStateId(val);
+    syncUrl(q, loc, cat, val);
   };
 
   // ─── Display helpers ──────────────────────────────────────────────────────
@@ -113,53 +136,66 @@ function SearchResults() {
   // Pagination helper — respects whichever filter is active
   const goPage = (p: number) => {
     setPage(p);
-    doFetch({ q: q.trim(), loc: loc.trim(), category: cat, page: p });
+    doFetch({ q: q.trim(), loc: loc.trim(), category: cat, state_id: stateId, page: p });
   };
 
   return (
     <div className="container mx-auto px-4 py-8 md:px-6">
 
       {/* Search Bar & Filters */}
-      <div className="mb-8 flex flex-col gap-4 md:flex-row">
-        <div className="flex w-full md:w-1/3 items-center gap-2 rounded-full border border-card-border bg-card-bg shadow-sm px-4 py-3 focus-within:ring-2 focus-within:ring-primary">
-          <MapPin className="h-4 w-4 text-primary flex-shrink-0" />
-          <input
-            value={loc}
-            onChange={(e) => handleLocChange(e.target.value)}
-            type="text"
-            placeholder="Enter location..."
-            className="w-full bg-transparent text-sm outline-none placeholder:text-foreground/40"
-          />
+      <div className="mb-8 flex flex-col gap-3 md:flex-row md:items-center">
+        {/* Row 1 for Mobile: Search & Location */}
+        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-1/2">
+          <div className="flex w-full items-center gap-2 rounded-full border border-card-border bg-card-bg shadow-sm px-4 py-3 focus-within:ring-2 focus-within:ring-primary">
+            <Search className="h-4 w-4 text-foreground/40 flex-shrink-0" />
+            <input
+              value={q}
+              onChange={(e) => handleQChange(e.target.value)}
+              type="text"
+              placeholder="Search keywords..."
+              className="w-full bg-transparent text-sm outline-none placeholder:text-foreground/40"
+            />
+          </div>
+          <div className="flex w-full items-center gap-2 rounded-full border border-card-border bg-card-bg shadow-sm px-4 py-3 focus-within:ring-2 focus-within:ring-primary">
+            <MapPin className="h-4 w-4 text-primary flex-shrink-0" />
+            <input
+              value={loc}
+              onChange={(e) => handleLocChange(e.target.value)}
+              type="text"
+              placeholder="Location..."
+              className="w-full bg-transparent text-sm outline-none placeholder:text-foreground/40"
+            />
+          </div>
         </div>
 
-        <div className="flex w-full md:w-1/3 items-center gap-2 rounded-full border border-card-border bg-card-bg shadow-sm px-4 py-3 focus-within:ring-2 focus-within:ring-primary">
-          <Star className="h-4 w-4 text-primary flex-shrink-0" />
-          <select
-            value={cat}
-            onChange={(e) => handleCatChange(e.target.value)}
-            className="w-full bg-transparent text-sm outline-none cursor-pointer text-foreground appearance-none"
-          >
-            <option value="">All Categories</option>
-            <option value="Bakery/Cake Shop">Cake Shop</option>
-            <option value="Beauty Parlour">Beauty Parlour</option>
-            <option value="Tailoring">Tailoring</option>
-            <option value="Marriage Services">Marriage Services</option>
-            <option value="Furniture Store">Furniture Store</option>
-            <option value="Garments (Ladies)">Garments (Ladies)</option>
-            <option value="Stationery">Stationery</option>
-            <option value="Jewellery (Imitation)">Jewellery (Imitation)</option>
-          </select>
-        </div>
-
-        <div className="flex w-full md:w-1/3 items-center gap-2 rounded-full border border-card-border bg-card-bg shadow-sm px-4 py-3 focus-within:ring-2 focus-within:ring-primary">
-          <Search className="h-4 w-4 text-foreground/40 flex-shrink-0" />
-          <input
-            value={q}
-            onChange={(e) => handleQChange(e.target.value)}
-            type="text"
-            placeholder="Search keywords..."
-            className="w-full bg-transparent text-sm outline-none placeholder:text-foreground/40"
-          />
+        {/* Row 2 for Mobile: Category & State */}
+        <div className="flex flex-row gap-3 w-full md:w-1/2">
+          <div className="flex w-1/2 items-center gap-2 rounded-full border border-card-border bg-card-bg shadow-sm px-3 py-3 focus-within:ring-2 focus-within:ring-primary">
+            <MapPin className="h-4 w-4 text-primary flex-shrink-0" />
+            <select
+              value={stateId}
+              onChange={(e) => handleStateChange(e.target.value)}
+              className="w-full bg-transparent text-xs sm:text-sm outline-none cursor-pointer text-foreground appearance-none truncate"
+            >
+              <option value="">All States</option>
+              {dbStates.map((st) => (
+                <option key={st.id} value={st.id}>{st.state_name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex w-1/2 items-center gap-2 rounded-full border border-card-border bg-card-bg shadow-sm px-3 py-3 focus-within:ring-2 focus-within:ring-primary">
+            <Star className="h-4 w-4 text-primary flex-shrink-0" />
+            <select
+              value={cat}
+              onChange={(e) => handleCatChange(e.target.value)}
+              className="w-full bg-transparent text-xs sm:text-sm outline-none cursor-pointer text-foreground appearance-none truncate"
+            >
+              <option value="">All Categories</option>
+              {dbCategories.map((c) => (
+                <option key={c.id} value={c.cat_name}>{c.cat_name}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
