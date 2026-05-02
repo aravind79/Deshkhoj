@@ -118,18 +118,18 @@ router.get('/', async (req: Request, res: Response) => {
       const qTerm = `%${q}%`;
       const qSpTerm = `%${qSpaceless}%`;
 
-      // Super search: match name, description, address, category names, AND individual product names
-      let qCondition = `(
-        COALESCE(d.dukaan_name, '') LIKE ? OR REPLACE(COALESCE(d.dukaan_name, ''), ' ', '') LIKE ? OR 
-        COALESCE(d.dukaan_desc, '') LIKE ? OR REPLACE(COALESCE(d.dukaan_desc, ''), ' ', '') LIKE ? OR 
-        COALESCE(d.dukaan_addr, '') LIKE ? OR REPLACE(COALESCE(d.dukaan_addr, ''), ' ', '') LIKE ? OR 
-        COALESCE(d.shop_categories, '') LIKE ? OR REPLACE(COALESCE(d.shop_categories, ''), ' ', '') LIKE ? OR 
-        COALESCE(d.category_1, '') LIKE ? OR REPLACE(COALESCE(d.category_1, ''), ' ', '') LIKE ? OR 
-        COALESCE(d.category_2, '') LIKE ? OR REPLACE(COALESCE(d.category_2, ''), ' ', '') LIKE ? OR 
-        COALESCE(d.category_3, '') LIKE ? OR REPLACE(COALESCE(d.category_3, ''), ' ', '') LIKE ? OR 
-        EXISTS (SELECT 1 FROM dukaan_products dp WHERE dp.shop_id = d.id AND (COALESCE(dp.prod_name, '') LIKE ? OR REPLACE(COALESCE(dp.prod_name, ''), ' ', '') LIKE ?))
-      )`;
-      const qParams = [
+      // Base conditions: full phrase + spaceless phrase match across all fields and products
+      const qConditionParts: string[] = [
+        `COALESCE(d.dukaan_name, '') LIKE ?`, `REPLACE(COALESCE(d.dukaan_name, ''), ' ', '') LIKE ?`,
+        `COALESCE(d.dukaan_desc, '') LIKE ?`, `REPLACE(COALESCE(d.dukaan_desc, ''), ' ', '') LIKE ?`,
+        `COALESCE(d.dukaan_addr, '') LIKE ?`, `REPLACE(COALESCE(d.dukaan_addr, ''), ' ', '') LIKE ?`,
+        `COALESCE(d.shop_categories, '') LIKE ?`, `REPLACE(COALESCE(d.shop_categories, ''), ' ', '') LIKE ?`,
+        `COALESCE(d.category_1, '') LIKE ?`, `REPLACE(COALESCE(d.category_1, ''), ' ', '') LIKE ?`,
+        `COALESCE(d.category_2, '') LIKE ?`, `REPLACE(COALESCE(d.category_2, ''), ' ', '') LIKE ?`,
+        `COALESCE(d.category_3, '') LIKE ?`, `REPLACE(COALESCE(d.category_3, ''), ' ', '') LIKE ?`,
+        `EXISTS (SELECT 1 FROM dukaan_products dp WHERE dp.shop_id = d.id AND (COALESCE(dp.prod_name, '') LIKE ? OR REPLACE(COALESCE(dp.prod_name, ''), ' ', '') LIKE ?))`
+      ];
+      const qParams: (string | number)[] = [
         qTerm, qSpTerm,
         qTerm, qSpTerm,
         qTerm, qSpTerm,
@@ -139,7 +139,26 @@ router.get('/', async (req: Request, res: Response) => {
         qTerm, qSpTerm,
         qTerm, qSpTerm
       ];
-      
+
+      // SMART TOKEN SEARCH: split into individual words and match each one separately.
+      // "Vermi compost" → ["Vermi","compost"] → finds "Vermicompost Bed", "Compost Maker", etc.
+      const qParts = q.split(/[\s\/\-,]+/).filter((t: string) => t.length > 2);
+      qParts.forEach((part: string) => {
+        const partTerm = `%${part}%`;
+        qConditionParts.push(
+          `COALESCE(d.dukaan_name, '') LIKE ?`,
+          `COALESCE(d.dukaan_desc, '') LIKE ?`,
+          `COALESCE(d.shop_categories, '') LIKE ?`,
+          `COALESCE(d.category_1, '') LIKE ?`,
+          `COALESCE(d.category_2, '') LIKE ?`,
+          `COALESCE(d.category_3, '') LIKE ?`,
+          `EXISTS (SELECT 1 FROM dukaan_products dp WHERE dp.shop_id = d.id AND COALESCE(dp.prod_name, '') LIKE ?)`
+        );
+        qParams.push(partTerm, partTerm, partTerm, partTerm, partTerm, partTerm, partTerm);
+      });
+
+      let qCondition = `(${qConditionParts.join(' OR ')})`;
+
       if (categoryIds.length > 0) {
         const idConditions = categoryIds.map(() => `FIND_IN_SET(?, REPLACE(COALESCE(d.shop_categories, ''), ' ', ''))`).join(' OR ');
         qCondition = `(${qCondition} OR ${idConditions})`;
