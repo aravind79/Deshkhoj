@@ -18,6 +18,7 @@ function SearchResults() {
   // Local input state — synced from URL on navigation, driven by user typing
   const [q,   setQ]   = useState(q_url);
   const [loc, setLoc] = useState(loc_url);
+  const [cat, setCat] = useState(cat_url);
 
   const [results,     setResults]     = useState<Business[]>([]);
   const [meta,        setMeta]        = useState({ total: 0, page: 1, totalPages: 1 });
@@ -31,7 +32,7 @@ function SearchResults() {
   useEffect(() => {
     setQ(q_url);
     setLoc(loc_url);
-    // Don't sync cat_url into local state — it only lives in the URL
+    setCat(cat_url);
   }, [q_url, loc_url, cat_url]);
 
   // ─── Core fetch ───────────────────────────────────────────────────────────
@@ -61,31 +62,26 @@ function SearchResults() {
   };
 
   // ─── Main fetch effect (debounced) ────────────────────────────────────────
-  // KEY RULE: if the user has typed something in `q`, we send only `q` (no category).
-  // This prevents the AND-condition conflict:
-  //   category="Cake Shop" AND q="Vermi compost" → 0 results
-  // When q is empty, we use the URL category (clicked from home page).
   useEffect(() => {
     const timer = setTimeout(() => {
       setPage(1);
-      const effectiveCategory = q.trim() ? "" : cat_url;
-      doFetch({ q: q.trim(), loc: loc.trim(), category: effectiveCategory, page: 1 });
+      doFetch({ q: q.trim(), loc: loc.trim(), category: cat, page: 1 });
     }, 300);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, loc, cat_url]);
+  }, [q, loc, cat]);
 
   // ─── URL sync on typing ───────────────────────────────────────────────────
   // When the user types, update the URL so it stays shareable/refresh-safe.
-  // Intentionally clears ?category= so the old filter doesn't persist.
   const urlTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const syncUrl = (newQ: string, newLoc: string) => {
+  const syncUrl = (newQ: string, newLoc: string, newCat: string) => {
     if (urlTimer.current) clearTimeout(urlTimer.current);
     urlTimer.current = setTimeout(() => {
       const p = new URLSearchParams();
       if (newQ.trim())   p.set("q",   newQ.trim());
       if (newLoc.trim()) p.set("loc", newLoc.trim());
+      if (newCat)        p.set("category", newCat);
       const qs = p.toString();
       router.replace(qs ? `/search?${qs}` : "/search", { scroll: false });
     }, 500);
@@ -93,18 +89,23 @@ function SearchResults() {
 
   const handleQChange = (val: string) => {
     setQ(val);
-    syncUrl(val, loc);
+    syncUrl(val, loc, cat);
   };
 
   const handleLocChange = (val: string) => {
     setLoc(val);
-    syncUrl(q, val);
+    syncUrl(q, val, cat);
+  };
+
+  const handleCatChange = (val: string) => {
+    setCat(val);
+    syncUrl(q, loc, val);
   };
 
   // ─── Display helpers ──────────────────────────────────────────────────────
-  const isFiltered  = q.length > 0 || loc.length > 0 || !!cat_url;
-  const headingText = (cat_url && !q.trim())
-    ? `Results for ${cat_url}`
+  const isFiltered  = q.length > 0 || loc.length > 0 || cat.length > 0;
+  const headingText = (cat && !q.trim())
+    ? `Results for ${cat}`
     : q.trim()
     ? `Results for "${q}"`
     : "Explore Businesses";
@@ -112,16 +113,15 @@ function SearchResults() {
   // Pagination helper — respects whichever filter is active
   const goPage = (p: number) => {
     setPage(p);
-    const effectiveCategory = q.trim() ? "" : cat_url;
-    doFetch({ q: q.trim(), loc: loc.trim(), category: effectiveCategory, page: p });
+    doFetch({ q: q.trim(), loc: loc.trim(), category: cat, page: p });
   };
 
   return (
     <div className="container mx-auto px-4 py-8 md:px-6">
 
-      {/* Search Bar */}
+      {/* Search Bar & Filters */}
       <div className="mb-8 flex flex-col gap-4 md:flex-row">
-        <div className="flex w-full items-center gap-2 rounded-full border border-card-border bg-card-bg shadow-sm px-4 py-3 focus-within:ring-2 focus-within:ring-primary md:w-auto md:min-w-[240px]">
+        <div className="flex w-full md:w-1/3 items-center gap-2 rounded-full border border-card-border bg-card-bg shadow-sm px-4 py-3 focus-within:ring-2 focus-within:ring-primary">
           <MapPin className="h-4 w-4 text-primary flex-shrink-0" />
           <input
             value={loc}
@@ -131,13 +131,33 @@ function SearchResults() {
             className="w-full bg-transparent text-sm outline-none placeholder:text-foreground/40"
           />
         </div>
-        <div className="flex w-full flex-1 items-center gap-2 rounded-full border border-card-border bg-card-bg shadow-sm px-4 py-3 focus-within:ring-2 focus-within:ring-primary">
+
+        <div className="flex w-full md:w-1/3 items-center gap-2 rounded-full border border-card-border bg-card-bg shadow-sm px-4 py-3 focus-within:ring-2 focus-within:ring-primary">
+          <Star className="h-4 w-4 text-primary flex-shrink-0" />
+          <select
+            value={cat}
+            onChange={(e) => handleCatChange(e.target.value)}
+            className="w-full bg-transparent text-sm outline-none cursor-pointer text-foreground appearance-none"
+          >
+            <option value="">All Categories</option>
+            <option value="Bakery/Cake Shop">Cake Shop</option>
+            <option value="Beauty Parlour">Beauty Parlour</option>
+            <option value="Tailoring">Tailoring</option>
+            <option value="Marriage Services">Marriage Services</option>
+            <option value="Furniture Store">Furniture Store</option>
+            <option value="Garments (Ladies)">Garments (Ladies)</option>
+            <option value="Stationery">Stationery</option>
+            <option value="Jewellery (Imitation)">Jewellery (Imitation)</option>
+          </select>
+        </div>
+
+        <div className="flex w-full md:w-1/3 items-center gap-2 rounded-full border border-card-border bg-card-bg shadow-sm px-4 py-3 focus-within:ring-2 focus-within:ring-primary">
           <Search className="h-4 w-4 text-foreground/40 flex-shrink-0" />
           <input
             value={q}
             onChange={(e) => handleQChange(e.target.value)}
             type="text"
-            placeholder="What are you looking for?"
+            placeholder="Search keywords..."
             className="w-full bg-transparent text-sm outline-none placeholder:text-foreground/40"
           />
         </div>
