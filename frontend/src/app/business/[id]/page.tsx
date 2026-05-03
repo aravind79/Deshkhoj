@@ -322,13 +322,15 @@ export default function BusinessDetail() {
               <div className="rounded-3xl border border-card-border bg-white p-6 shadow-lg">
                 <h3 className="text-lg font-bold text-foreground mb-4">Contact Seller</h3>
                 <div className="space-y-4">
-                  <div className="flex items-center gap-4 p-4 rounded-2xl bg-background border border-card-border">
-                    <div className="h-10 w-10 flex-shrink-0 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+                  <div className="flex items-center gap-4 p-4 rounded-2xl bg-background border border-card-border cursor-pointer hover:border-primary transition group" onClick={() => setIsInquiryOpen(true)}>
+                    <div className="h-10 w-10 flex-shrink-0 rounded-full bg-green-100 flex items-center justify-center text-green-600 group-hover:bg-primary group-hover:text-white transition">
                       <Phone className="h-5 w-5" />
                     </div>
                     <div>
                       <p className="text-[10px] font-bold text-foreground/40 uppercase">Mobile Number</p>
-                      <p className="text-sm font-bold text-foreground">{biz.contact_no}</p>
+                      <p className="text-sm font-bold text-primary flex items-center gap-2">
+                        +91 98*** **** <span className="text-[10px] underline">Click to View</span>
+                      </p>
                     </div>
                   </div>
                   
@@ -344,10 +346,10 @@ export default function BusinessDetail() {
                 </div>
 
                 <div className="mt-8 space-y-3">
-                  <a href={`tel:${biz.contact_no}`} className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 py-3.5 text-sm font-bold text-white shadow-md hover:bg-green-700 transition active:scale-95">
+                  <button onClick={() => setIsInquiryOpen(true)} className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 py-3.5 text-sm font-bold text-white shadow-md hover:bg-green-700 transition active:scale-95">
                     <Phone className="h-4 w-4" /> CALL NOW
-                  </a>
-                  <button className="flex w-full items-center justify-center gap-2 rounded-xl border border-green-600/20 bg-green-50 py-3.5 text-sm font-bold text-green-700 hover:bg-green-100 transition active:scale-95">
+                  </button>
+                  <button onClick={() => setIsInquiryOpen(true)} className="flex w-full items-center justify-center gap-2 rounded-xl border border-green-600/20 bg-green-50 py-3.5 text-sm font-bold text-green-700 hover:bg-green-100 transition active:scale-95">
                     <MessageSquare className="h-4 w-4" /> WHATSAPP
                   </button>
                 </div>
