@@ -69,6 +69,10 @@ router.get('/stats', async (_req: Request, res: Response) => {
  * GET /api/businesses
  * Search and filter businesses
  */
+router.get('/ping', (req, res) => {
+    res.json({ success: true, message: "PONG! The latest businesses.ts is successfully running!" });
+});
+
 router.get('/', async (req: Request, res: Response) => {
   try {
     const {

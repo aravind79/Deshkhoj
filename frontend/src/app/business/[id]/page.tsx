@@ -372,7 +372,7 @@ export default function BusinessDetail() {
         isOpen={isInquiryOpen} 
         onClose={() => setIsInquiryOpen(false)} 
         shopId={biz.id} 
-        initialData={{ category: biz.shop_categories }}
+        initialData={{ category: getCategoryNames(biz.shop_categories) }}
       />
     </div>
   );

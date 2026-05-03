@@ -68,6 +68,10 @@ router.get('/stats', async (_req, res) => {
  * GET /api/businesses
  * Search and filter businesses
  */
+router.get('/ping', (req, res) => {
+    res.json({ success: true, message: "PONG! The latest businesses.js is successfully running!" });
+});
+
 router.get('/', async (req, res) => {
     try {
         const { q, loc, category, state_id, district_id, block_id, village_id, page = '1', limit = '12', } = req.query;
@@ -103,17 +107,17 @@ router.get('/', async (req, res) => {
             const qSpaceless = q.replace(/\s+/g, '');
             const qTerm = `%${q}%`;
             const qSpTerm = `%${qSpaceless}%`;
-            // Super search: match name, description, address, category names, AND individual product names
-            let qCondition = `(
-        COALESCE(d.dukaan_name, '') LIKE ? OR REPLACE(COALESCE(d.dukaan_name, ''), ' ', '') LIKE ? OR 
-        COALESCE(d.dukaan_desc, '') LIKE ? OR REPLACE(COALESCE(d.dukaan_desc, ''), ' ', '') LIKE ? OR 
-        COALESCE(d.dukaan_addr, '') LIKE ? OR REPLACE(COALESCE(d.dukaan_addr, ''), ' ', '') LIKE ? OR 
-        COALESCE(d.shop_categories, '') LIKE ? OR REPLACE(COALESCE(d.shop_categories, ''), ' ', '') LIKE ? OR 
-        COALESCE(d.category_1, '') LIKE ? OR REPLACE(COALESCE(d.category_1, ''), ' ', '') LIKE ? OR 
-        COALESCE(d.category_2, '') LIKE ? OR REPLACE(COALESCE(d.category_2, ''), ' ', '') LIKE ? OR 
-        COALESCE(d.category_3, '') LIKE ? OR REPLACE(COALESCE(d.category_3, ''), ' ', '') LIKE ? OR 
-        EXISTS (SELECT 1 FROM dukaan_products dp WHERE dp.shop_id = d.id AND (COALESCE(dp.prod_name, '') LIKE ? OR REPLACE(COALESCE(dp.prod_name, ''), ' ', '') LIKE ?))
-      )`;
+            // Base conditions: full phrase + spaceless phrase match across all fields and products
+            const qConditionParts = [
+                `COALESCE(d.dukaan_name, '') LIKE ?`, `REPLACE(COALESCE(d.dukaan_name, ''), ' ', '') LIKE ?`,
+                `COALESCE(d.dukaan_desc, '') LIKE ?`, `REPLACE(COALESCE(d.dukaan_desc, ''), ' ', '') LIKE ?`,
+                `COALESCE(d.dukaan_addr, '') LIKE ?`, `REPLACE(COALESCE(d.dukaan_addr, ''), ' ', '') LIKE ?`,
+                `COALESCE(d.shop_categories, '') LIKE ?`, `REPLACE(COALESCE(d.shop_categories, ''), ' ', '') LIKE ?`,
+                `COALESCE(d.category_1, '') LIKE ?`, `REPLACE(COALESCE(d.category_1, ''), ' ', '') LIKE ?`,
+                `COALESCE(d.category_2, '') LIKE ?`, `REPLACE(COALESCE(d.category_2, ''), ' ', '') LIKE ?`,
+                `COALESCE(d.category_3, '') LIKE ?`, `REPLACE(COALESCE(d.category_3, ''), ' ', '') LIKE ?`,
+                `EXISTS (SELECT 1 FROM dukaan_products dp WHERE dp.shop_id = d.id AND (COALESCE(dp.prod_name, '') LIKE ? OR REPLACE(COALESCE(dp.prod_name, ''), ' ', '') LIKE ?))`
+            ];
             const qParams = [
                 qTerm, qSpTerm,
                 qTerm, qSpTerm,
@@ -124,13 +128,28 @@ router.get('/', async (req, res) => {
                 qTerm, qSpTerm,
                 qTerm, qSpTerm
             ];
-            
+            // SMART TOKEN SEARCH: split into individual words and match each one separately.
+            // "Vermi compost" → ["Vermi","compost"] → finds "Vermicompost Bed", "Compost Maker", etc.
+            const qParts = q.split(/[\s\/\-,]+/).filter(t => t.length > 2);
+            qParts.forEach(part => {
+                const partTerm = `%${part}%`;
+                qConditionParts.push(
+                    `COALESCE(d.dukaan_name, '') LIKE ?`,
+                    `COALESCE(d.dukaan_desc, '') LIKE ?`,
+                    `COALESCE(d.shop_categories, '') LIKE ?`,
+                    `COALESCE(d.category_1, '') LIKE ?`,
+                    `COALESCE(d.category_2, '') LIKE ?`,
+                    `COALESCE(d.category_3, '') LIKE ?`,
+                    `EXISTS (SELECT 1 FROM dukaan_products dp WHERE dp.shop_id = d.id AND COALESCE(dp.prod_name, '') LIKE ?)`
+                );
+                qParams.push(partTerm, partTerm, partTerm, partTerm, partTerm, partTerm, partTerm);
+            });
+            let qCondition = `(${qConditionParts.join(' OR ')})`;
             if (categoryIds.length > 0) {
                 const idConditions = categoryIds.map(() => `FIND_IN_SET(?, REPLACE(COALESCE(d.shop_categories, ''), ' ', ''))`).join(' OR ');
                 qCondition = `(${qCondition} OR ${idConditions})`;
                 categoryIds.forEach(id => qParams.push(id.toString()));
             }
-
             conditions.push(qCondition);
             params.push(...qParams);
         }

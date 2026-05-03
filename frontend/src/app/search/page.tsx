@@ -124,6 +124,17 @@ function SearchResults() {
     ? `Results for "${q}"`
     : "Explore Businesses";
 
+  const getCategoryNames = (catString?: string) => {
+    if (!catString) return "General";
+    const ids = catString.split(',').map(s => Number(s.trim())).filter(n => !isNaN(n) && n > 0);
+    const names = ids.map(id => {
+      const category = dbCategories.find(c => c.id === id);
+      return category ? category.cat_name : null;
+    }).filter(Boolean);
+    const uniqueNames = Array.from(new Set(names));
+    return uniqueNames.length > 0 ? uniqueNames.join(', ') : "General";
+  };
+
   // Pagination helper — respects whichever filter is active
   const goPage = (p: number) => {
     setPage(p);
@@ -328,7 +339,7 @@ function SearchResults() {
         isOpen={!!inquiryShop}
         onClose={() => setInquiryShop(null)}
         shopId={inquiryShop?.id || 0}
-        initialData={{ category: inquiryShop?.shop_categories }}
+        initialData={{ category: getCategoryNames(inquiryShop?.shop_categories) }}
       />
     </div>
   );
