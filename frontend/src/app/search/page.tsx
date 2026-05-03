@@ -21,6 +21,7 @@ function SearchResults() {
   const [cat, setCat] = useState(cat_url);
 
   const [dbCategories, setDbCategories] = useState<{id: number; cat_name: string}[]>([]);
+  const [dbDistricts, setDbDistricts] = useState<{id: number; district_name: string}[]>([]);
 
   const [results,     setResults]     = useState<Business[]>([]);
   const [meta,        setMeta]        = useState({ total: 0, page: 1, totalPages: 1 });
@@ -37,10 +38,14 @@ function SearchResults() {
     setCat(cat_url);
   }, [q_url, loc_url, cat_url]);
 
-  // Load Categories on mount
+  // Load Categories & Districts on mount
   useEffect(() => {
     api.categories.list().then(res => {
       if (res.success) setDbCategories(res.data);
+    }).catch(console.error);
+
+    api.locations.districts().then(res => {
+      if (res.success) setDbDistricts(res.data);
     }).catch(console.error);
   }, []);
 
@@ -144,13 +149,16 @@ function SearchResults() {
           </div>
           <div className="flex w-full items-center gap-2 rounded-full border border-card-border bg-card-bg shadow-sm px-4 py-3 focus-within:ring-2 focus-within:ring-primary">
             <MapPin className="h-4 w-4 text-primary flex-shrink-0" />
-            <input
+            <select
               value={loc}
               onChange={(e) => handleLocChange(e.target.value)}
-              type="text"
-              placeholder="Location..."
-              className="w-full bg-transparent text-sm outline-none placeholder:text-foreground/40"
-            />
+              className="w-full bg-transparent text-sm outline-none cursor-pointer text-foreground appearance-none"
+            >
+              <option value="">All Locations</option>
+              {dbDistricts.map((d) => (
+                <option key={d.id} value={d.district_name}>{d.district_name}</option>
+              ))}
+            </select>
           </div>
         </div>
 
