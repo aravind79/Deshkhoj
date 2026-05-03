@@ -23,21 +23,37 @@ export default function BusinessDetail() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [reviewSuccess, setReviewSuccess] = useState(false);
   const [isInquiryOpen, setIsInquiryOpen] = useState(false);
+  const [categories, setCategories] = useState<{id: number, cat_name: string}[]>([]);
 
   useEffect(() => {
     if (!id) return;
     const bid = Array.isArray(id) ? id[0] : id;
     Promise.all([
       api.businesses.getById(bid),
-      api.businesses.reviews.get(bid)
+      api.businesses.reviews.get(bid),
+      api.categories.list()
     ])
-      .then(([bizRes, reviewsRes]) => {
+      .then(([bizRes, reviewsRes, catRes]) => {
         setBiz(bizRes.data);
         setReviews(reviewsRes.data);
+        if (catRes.success) setCategories(catRes.data);
       })
       .catch(() => router.push("/search"))
       .finally(() => setLoading(false));
   }, [id, router]);
+
+  const getCategoryNames = (catString: string) => {
+    if (!catString) return "General";
+    const ids = catString.split(',').map(s => Number(s.trim())).filter(n => !isNaN(n) && n > 0);
+    const names = ids.map(id => {
+      const cat = categories.find(c => c.id === id);
+      return cat ? cat.cat_name : null;
+    }).filter(Boolean);
+    
+    // De-duplicate names in case of "86,86,86"
+    const uniqueNames = Array.from(new Set(names));
+    return uniqueNames.length > 0 ? uniqueNames.join(', ') : "General";
+  };
 
   const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -184,7 +200,7 @@ export default function BusinessDetail() {
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-card-border overflow-hidden rounded-xl border border-card-border">
                 {[
-                  { label: "Business Category", value: biz.shop_categories || "General" },
+                  { label: "Business Category", value: getCategoryNames(biz.shop_categories) },
                   { label: "Owner Name", value: biz.dukaandar_name },
                   { label: "Years in Business", value: biz.years_established ? `${biz.years_established} Years` : "Established recently" },
                   { label: "Registration ID", value: `#DK-${biz.id}` },
